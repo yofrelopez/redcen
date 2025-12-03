@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  INSTITUTION  // Institución que publica notas
+  JOURNALIST   // Periodista acreditado
+  ADMIN        // Administrador de la plataforma
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(INSTITUTION)
+  
+  description  String?  // About the institution
+  website      String?  // Institution website
+  logo         String?  // Logo URL (Cloudinary)
+  
+  notes        PressNote[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PressNote {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text
+  summary     String?
+  published   Boolean  @default(false)
+  
+  mainImage   String?  // URL de la imagen principal (Cloudinary)
+  gallery     String[] // URLs de la galería (Cloudinary)
+  
+  categoryIds String[] @default([]) // IDs de categorías asignadas
+  
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
