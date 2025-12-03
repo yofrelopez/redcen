@@ -37,7 +37,7 @@ export default function DeleteNoteButton({ noteId, noteTitle }: DeleteButtonProp
                                 Cancelar
                             </Button>
                             <Button
-                                variant="default"
+                                variant="primary"
                                 size="sm"
                                 onClick={() => {
                                     toast.dismiss(t)

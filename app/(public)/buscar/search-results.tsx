@@ -13,7 +13,7 @@ interface SearchResultsProps {
     initialNotes: any[]
     institutions: Array<{
         id: string
-        name: string
+        name: string | null
         email: string
         logo: string | null
     }>

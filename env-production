@@ -6,7 +6,7 @@ DATABASE_URL="postgresql://neondb_owner:npg_1YAuCzWVQr4e@ep-noisy-scene-acj8g4yr
 
 # Auth
 NEXTAUTH_URL="https://redcen.com" # Change this to your actual production URL
-NEXTAUTH_SECRET="" # Generate a new secret with: openssl rand -base64 32
+NEXTAUTH_SECRET="Btkq65B7wrWFxbKkzp+8cydGSlLu1z4T5L8eR7qp22Y=" # Generado automáticamente para ti
 
 # Cloudinary (Same as local, or use a separate prod account)
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=""

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Toaster } from "sonner"
 import { revalidatePath } from "next/cache"
+import { Category } from "@prisma/client"
 
 export default async function CategoriasPage() {
     const session = await requireAuth()
@@ -79,7 +80,7 @@ export default async function CategoriasPage() {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {categories.map((category) => (
+                                {categories.map((category: Category) => (
                                     <div
                                         key={category.id}
                                         className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:border-primary/30 hover:bg-gray-50 transition-colors"
