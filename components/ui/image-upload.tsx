@@ -16,8 +16,9 @@ export default function ImageUpload({
     value,
     onChange,
     disabled,
-    label = "Subir Imagen"
-}: ImageUploadProps) {
+    label = "Subir Imagen",
+    className
+}: ImageUploadProps & { className?: string }) {
     const handleUpload = useCallback((result: any) => {
         onChange(result.info.secure_url)
     }, [onChange])
@@ -38,7 +39,7 @@ export default function ImageUpload({
                     return (
                         <div
                             onClick={() => open?.()}
-                            className="relative cursor-pointer hover:opacity-70 transition border-2 border-dashed border-gray-300 flex flex-col justify-center items-center h-64 rounded-lg bg-gray-50 overflow-hidden group"
+                            className={`relative cursor-pointer hover:opacity-70 transition border-2 border-dashed border-gray-300 flex flex-col justify-center items-center rounded-lg bg-gray-50 overflow-hidden group ${className || "h-64"}`}
                         >
                             {value ? (
                                 <div className="relative w-full h-full">

@@ -1,33 +1,84 @@
 "use client"
 
-import { updateProfile, updatePassword } from "@/app/actions/profile"
+import { updateProfile } from "@/actions/profile"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import ImageUpload from "@/components/ui/image-upload"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
+import { InfoForm } from "@/components/institutions/dashboard/info-form"
+import { LocationForm } from "@/components/institutions/dashboard/location-form"
+import { SocialForm } from "@/components/institutions/dashboard/social-form"
+import { SecurityForm } from "@/components/institutions/dashboard/security-form"
+
+interface SocialLinks {
+    facebook?: string | null
+    twitter?: string | null
+    instagram?: string | null
+    youtube?: string | null
+}
 
 interface ProfileFormProps {
     user: {
         id: string
         email: string
         name: string | null
+        abbreviation: string | null
         description: string | null
         website: string | null
         logo: string | null
+        banner: string | null
+        slug: string | null
+        region: string | null
+        province: string | null
+        district: string | null
+        address: string | null
+        googleMapsUrl: string | null
+        phone: string | null
+        publicEmail: string | null
+        socialLinks: any
         role: string
     }
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
     const [logo, setLogo] = useState(user.logo || "")
+    const [banner, setBanner] = useState(user.banner || "")
     const [isPending, startTransition] = useTransition()
-    const [showPasswordForm, setShowPasswordForm] = useState(false)
+
+    // Ubigeo State
+    const [selectedRegion, setSelectedRegion] = useState(user.region || "")
+    const [selectedProvince, setSelectedProvince] = useState(user.province || "")
+    const [selectedDistrict, setSelectedDistrict] = useState(user.district || "")
+
+    const socialLinks = (user.socialLinks as SocialLinks) || {}
+
+    // Reset province and district when region changes
+    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const region = e.target.value
+        setSelectedRegion(region)
+        setSelectedProvince("")
+        setSelectedDistrict("")
+    }
+
+    // Reset district when province changes
+    const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const province = e.target.value
+        setSelectedProvince(province)
+        setSelectedDistrict("")
+    }
+
+    const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedDistrict(e.target.value)
+    }
 
     const handleProfileSubmit = async (formData: FormData) => {
         startTransition(async () => {
             try {
                 formData.set("logo", logo)
+                formData.set("banner", banner)
+                formData.set("region", selectedRegion)
+                formData.set("province", selectedProvince)
+                formData.set("district", selectedDistrict)
                 await updateProfile(formData)
                 toast.success("Perfil actualizado correctamente")
             } catch (error: any) {
@@ -36,184 +87,85 @@ export function ProfileForm({ user }: ProfileFormProps) {
         })
     }
 
-    const handlePasswordSubmit = async (formData: FormData) => {
-        startTransition(async () => {
-            try {
-                await updatePassword(formData)
-                toast.success("Contraseña actualizada correctamente")
-                setShowPasswordForm(false)
-                // Reset form
-                const form = document.getElementById("password-form") as HTMLFormElement
-                form?.reset()
-            } catch (error: any) {
-                toast.error(error.message || "Error al actualizar contraseña")
-            }
-        })
-    }
-
     return (
         <div className="space-y-6">
             {/* Profile Information */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Información de la Institución</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form action={handleProfileSubmit} className="space-y-6">
-                        {/* Logo */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Logo de la Institución
-                            </label>
-                            <ImageUpload
-                                value={logo}
-                                onChange={(url) => setLogo(url)}
-                            />
-                        </div>
+            <form action={handleProfileSubmit} className="space-y-6">
+                {/* Identity Section */}
+                <Card className="border-none shadow-sm">
+                    <CardHeader className="pb-4 border-b border-gray-50">
+                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                            <div className="h-8 w-1 bg-primary rounded-full" />
+                            Identidad Institucional
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                        <InfoForm
+                            defaultValues={{
+                                name: user.name,
+                                abbreviation: user.abbreviation,
+                                slug: user.slug,
+                                phone: user.phone,
+                                publicEmail: user.publicEmail,
+                                website: user.website,
+                                logo: user.logo,
+                                banner: user.banner
+                            }}
+                            logo={logo}
+                            setLogo={setLogo}
+                            banner={banner}
+                            setBanner={setBanner}
+                        />
+                    </CardContent>
+                </Card>
 
-                        {/* Email (Read-only) */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                value={user.email}
-                                disabled
-                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm text-gray-500"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">El email no se puede modificar</p>
-                        </div>
+                {/* Location Section */}
+                <Card className="border-none shadow-sm">
+                    <CardHeader className="pb-4 border-b border-gray-50">
+                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                            <div className="h-8 w-1 bg-orange-500 rounded-full" />
+                            Ubicación
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                        <LocationForm
+                            defaultValues={{
+                                address: user.address,
+                                googleMapsUrl: user.googleMapsUrl
+                            }}
+                            selectedRegion={selectedRegion}
+                            selectedProvince={selectedProvince}
+                            selectedDistrict={selectedDistrict}
+                            onRegionChange={handleRegionChange}
+                            onProvinceChange={handleProvinceChange}
+                            onDistrictChange={handleDistrictChange}
+                        />
+                    </CardContent>
+                </Card>
 
-                        {/* Name */}
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                Nombre de la Institución *
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                defaultValue={user.name || ""}
-                                required
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                placeholder="Ej: Ministerio de Educación"
-                            />
-                        </div>
+                {/* Social Section */}
+                <Card className="border-none shadow-sm">
+                    <CardHeader className="pb-4 border-b border-gray-50">
+                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                            <div className="h-8 w-1 bg-blue-400 rounded-full" />
+                            Redes Sociales
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                        <SocialForm defaultValues={socialLinks} />
+                    </CardContent>
+                </Card>
 
-                        {/* Description */}
-                        <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                                Descripción
-                            </label>
-                            <textarea
-                                id="description"
-                                name="description"
-                                rows={4}
-                                defaultValue={user.description || ""}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                placeholder="Describe brevemente tu institución..."
-                            />
-                        </div>
-
-                        {/* Website */}
-                        <div>
-                            <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
-                                Sitio Web Oficial
-                            </label>
-                            <input
-                                type="url"
-                                id="website"
-                                name="website"
-                                defaultValue={user.website || ""}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                placeholder="https://ejemplo.gob.pe"
-                            />
-                        </div>
-
-                        {/* Submit */}
-                        <div className="flex justify-end">
-                            <Button type="submit" disabled={isPending} className="px-8">
-                                {isPending ? "Guardando..." : "Guardar Cambios"}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                {/* Submit */}
+                <div className="sticky bottom-4 z-10 flex justify-end bg-white/80 backdrop-blur-md p-4 rounded-xl border border-gray-100 shadow-lg">
+                    <Button type="submit" disabled={isPending} className="px-8 shadow-md hover:shadow-lg transition-all">
+                        {isPending ? "Guardando..." : "Guardar Cambios"}
+                    </Button>
+                </div>
+            </form>
 
             {/* Password Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Seguridad</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {!showPasswordForm ? (
-                        <Button
-                            onClick={() => setShowPasswordForm(true)}
-                            variant="outline"
-                        >
-                            Cambiar Contraseña
-                        </Button>
-                    ) : (
-                        <form id="password-form" action={handlePasswordSubmit} className="space-y-4">
-                            <div>
-                                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Contraseña Actual *
-                                </label>
-                                <input
-                                    type="password"
-                                    id="currentPassword"
-                                    name="currentPassword"
-                                    required
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Nueva Contraseña *
-                                </label>
-                                <input
-                                    type="password"
-                                    id="newPassword"
-                                    name="newPassword"
-                                    required
-                                    minLength={6}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
-                            </div>
-
-                            <div>
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Confirmar Nueva Contraseña *
-                                </label>
-                                <input
-                                    type="password"
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    required
-                                    minLength={6}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 justify-end">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => setShowPasswordForm(false)}
-                                >
-                                    Cancelar
-                                </Button>
-                                <Button type="submit" disabled={isPending}>
-                                    {isPending ? "Actualizando..." : "Actualizar Contraseña"}
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </CardContent>
-            </Card>
+            <SecurityForm isPending={isPending} startTransition={startTransition} />
         </div>
     )
 }

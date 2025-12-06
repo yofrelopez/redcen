@@ -1,6 +1,6 @@
 "use client"
 
-import { deleteNote } from "@/app/actions/notes"
+import { deleteNote } from "@/actions/notes"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useTransition } from "react"

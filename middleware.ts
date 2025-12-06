@@ -2,7 +2,8 @@ import NextAuth from "next-auth"
 import { authConfig } from "@/lib/auth.config"
 
 export default NextAuth(authConfig).auth
+// export default function middleware() {} // Pass through
 
 export const config = {
-    matcher: ["/((?!api|_next/static|_next/image|images|favicon.ico).*)"],
+    matcher: ["/((?!api|_next/static|_next/image|images|favicon.ico|.*opengraph-image|.*\\.png$).*)"],
 }

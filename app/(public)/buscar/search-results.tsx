@@ -2,15 +2,15 @@
 
 import { useRouter } from "next/navigation"
 import { useState, useTransition, useEffect, useRef } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
-import { es } from "date-fns/locale"
+import { SearchFilters } from "@/components/search/search-filters"
+import { SearchResultsList } from "@/components/search/search-results-list"
+import { Pagination } from "@/components/ui/pagination"
 
 interface SearchResultsProps {
     initialNotes: any[]
+    total: number
+    totalPages: number
+    currentPage: number
     institutions: Array<{
         id: string
         name: string | null
@@ -28,6 +28,9 @@ interface SearchResultsProps {
 
 export function SearchResults({
     initialNotes,
+    total,
+    totalPages,
+    currentPage,
     institutions,
     categories,
     initialQuery = "",
@@ -71,6 +74,8 @@ export function SearchResults({
         if (selectedInstitution) params.set("institution", selectedInstitution)
         selectedCategories.forEach((cat) => params.append("categories", cat))
 
+        // Note: We intentionally don't include 'page' here so it resets to page 1 on filter change
+
         const queryString = params.toString()
         const newUrl = queryString ? `/buscar?${queryString}` : "/buscar"
 
@@ -99,150 +104,31 @@ export function SearchResults({
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Filters Sidebar */}
-            <div className="lg:col-span-1">
-                <Card className="sticky top-4">
-                    <CardContent className="p-6 space-y-6">
-                        <div>
-                            <h3 className="font-semibold text-gray-900 mb-3">Búsqueda</h3>
-                            <input
-                                type="text"
-                                placeholder="Buscar palabras clave..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
+            <SearchFilters
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedInstitution={selectedInstitution}
+                setSelectedInstitution={setSelectedInstitution}
+                selectedCategories={selectedCategories}
+                toggleCategory={toggleCategory}
+                institutions={institutions}
+                categories={categories}
+                clearFilters={clearFilters}
+                hasActiveFilters={!!hasActiveFilters}
+                isPending={isPending}
+            />
 
-                        <div>
-                            <h3 className="font-semibold text-gray-900 mb-3">Institución</h3>
-                            <select
-                                value={selectedInstitution}
-                                onChange={(e) => setSelectedInstitution(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            >
-                                <option value="">Todas las instituciones</option>
-                                {institutions.map((inst) => (
-                                    <option key={inst.id} value={inst.id}>
-                                        {inst.name || inst.email}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+            <div className="lg:col-span-3 space-y-6">
 
-                        <div>
-                            <h3 className="font-semibold text-gray-900 mb-3">Categorías</h3>
-                            <div className="space-y-2">
-                                {categories.map((cat) => (
-                                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCategories.has(cat.id)}
-                                            onChange={() => toggleCategory(cat.id)}
-                                            className="rounded border-gray-300 text-primary focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-gray-700">{cat.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
 
-                        {hasActiveFilters && (
-                            <div className="space-y-2">
-                                <Button onClick={clearFilters} variant="outline" className="w-full">
-                                    Limpiar filtros
-                                </Button>
-                                <p className="text-xs text-gray-500 text-center">
-                                    {isPending ? "Buscando..." : "Búsqueda automática activa"}
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+                <SearchResultsList notes={initialNotes} isPending={isPending} />
 
-            {/* Results */}
-            <div className="lg:col-span-3">
-                <div className="mb-4">
-                    <p className="text-gray-600">
-                        {initialNotes.length} {initialNotes.length === 1 ? "resultado encontrado" : "resultados encontrados"}
-                    </p>
+                <div className="pt-8 border-t border-gray-100">
+                    <Pagination
+                        totalPages={totalPages}
+                        currentPage={currentPage}
+                    />
                 </div>
-
-                {initialNotes.length === 0 ? (
-                    <Card className="border-dashed bg-gray-50">
-                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                            <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900">No se encontraron resultados</h3>
-                            <p className="text-gray-500 mt-2">Intenta ajustar tus filtros de búsqueda</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="space-y-6">
-                        {initialNotes.map((note) => (
-                            <Card key={note.id} className="hover:shadow-lg transition-shadow">
-                                <CardContent className="p-6">
-                                    <div className="flex gap-6">
-                                        {note.mainImage && (
-                                            <div className="relative w-48 h-32 flex-shrink-0 rounded-lg overflow-hidden">
-                                                <Image
-                                                    src={note.mainImage}
-                                                    alt={note.title}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="flex-1">
-                                            <div className="flex items-start justify-between gap-4 mb-2">
-                                                <Link href={`/notas/${note.slug}`} className="flex-1">
-                                                    <h3 className="text-xl font-bold text-gray-900 hover:text-primary transition-colors line-clamp-2">
-                                                        {note.title}
-                                                    </h3>
-                                                </Link>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    {note.author.logo && (
-                                                        <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                                                            <Image
-                                                                src={note.author.logo}
-                                                                alt={note.author.name || ""}
-                                                                fill
-                                                                className="object-cover"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                    <span className="text-sm text-gray-600 font-medium">
-                                                        {note.author.name || note.author.email}
-                                                    </span>
-                                                </div>
-                                                <span className="text-sm text-gray-400">
-                                                    {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true, locale: es })}
-                                                </span>
-                                            </div>
-
-                                            {note.summary && (
-                                                <p className="text-gray-600 line-clamp-2 mb-3">{note.summary}</p>
-                                            )}
-
-                                            <Link href={`/notas/${note.slug}`}>
-                                                <Button variant="outline" size="sm">
-                                                    Leer más →
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
     )

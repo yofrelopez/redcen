@@ -1,11 +1,11 @@
-import { getInstitutionByEmail, getNotesByInstitution } from "@/app/actions/public"
-import { notFound } from "next/navigation"
-import Image from "next/image"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
+import { notFound } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
-import type { Metadata } from "next"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getInstitutionByEmail, getNotesByInstitution } from "@/actions/public"
 
 interface InstitutionPageProps {
     params: Promise<{ email: string }>
@@ -126,7 +126,7 @@ export default async function InstitutionPage({ params }: InstitutionPageProps) 
                 ) : (
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {notes.map((note) => (
-                            <Link key={note.id} href={`/notas/${note.slug}`}>
+                            <Link key={note.id} href={`/${note.author.slug}/${note.slug}`}>
                                 <Card className="group h-full flex flex-col overflow-hidden border-gray-200 hover:border-primary/30 hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-300">
                                     {note.mainImage && (
                                         <div className="relative w-full h-48 overflow-hidden bg-gray-100">

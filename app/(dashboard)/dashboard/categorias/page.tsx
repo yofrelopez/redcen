@@ -1,4 +1,4 @@
-import { getCategories, createCategory, updateCategory, deleteCategory } from "@/app/actions/categories"
+import { getCategories, createCategory, updateCategory, deleteCategory } from "@/actions/categories"
 import { requireAuth } from "@/lib/auth-helpers"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"

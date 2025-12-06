@@ -1,14 +1,13 @@
-import { createNote } from "@/app/actions/notes"
-import { getCategories } from "@/app/actions/categories"
-import { Button } from "@/components/ui/button"
+
 import Link from "next/link"
+import { getCategories } from "@/actions/categories"
 import { NewNoteForm } from "./new-note-form"
 
 export default async function NewNotePage() {
     const categories = await getCategories()
 
     return (
-        <div className="max-w-4xl mx-auto pb-10">
+        <div className="w-full max-w-[1920px] mx-auto pb-10 px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <Link href="/dashboard/notas" className="text-sm font-medium text-gray-500 hover:text-primary transition-colors flex items-center gap-1">

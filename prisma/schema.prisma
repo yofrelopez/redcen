@@ -19,6 +19,7 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
+  abbreviation String?  // Short name for the institution
   passwordHash String
   role         Role     @default(INSTITUTION)
   
@@ -30,18 +31,52 @@ model User {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Institution Profile Fields
+  slug         String?   @unique // URL amigable (ej: /institucion/municipalidad-lima)
+  banner       String?   // Imagen de portada
+  
+  // Ubicación
+  region       String?
+  province     String?
+  district     String?
+  address      String?
+  googleMapsUrl String?
+
+  // Contacto
+  phone        String?
+  publicEmail  String?
+  socialLinks  Json?     // { facebook: string, twitter: string, etc. }
 }
 
 model PressNote {
   id          String   @id @default(cuid())
   title       String
   slug        String   @unique
+  mainImage        String?
+  mainImageAlt     String?
+  mainImageCaption String?
+  gallery          String[]
   content     String   @db.Text
   summary     String?
   published   Boolean  @default(false)
   
-  mainImage   String?  // URL de la imagen principal (Cloudinary)
-  gallery     String[] // URLs de la galería (Cloudinary)
+
+  // Ubicación
+  region      String?
+  province    String?
+  district    String?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  tags            String[] @default([])
+
+  // Métricas
+  views       Int      @default(0)
+
+  // Programación
+  scheduledFor DateTime?
   
   categoryIds String[] @default([]) // IDs de categorías asignadas
   
@@ -50,6 +85,21 @@ model PressNote {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  type        NoteType @default(PRESS_NOTE)
+}
+
+enum NoteType {
+  PRESS_NOTE
+  STATEMENT
+  EVENT
+  PODCAST
+  VIDEO
+  OPINION
+  DOCUMENT
+  ALERT
+  GALLERY
+  REPORT
 }
 
 model Category {

@@ -52,11 +52,11 @@ export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebar
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-primary text-white shadow-xl transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+                className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-xl transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
             >
                 {/* Header with Logo */}
-                <div className="flex h-20 items-center justify-center border-b border-white/10 px-6">
-                    <div className="relative h-10 w-40">
+                <div className="flex h-20 items-center justify-center border-b border-white/5 px-6 bg-[#0f172a]">
+                    <div className="relative h-8 w-36">
                         <Image
                             src="/images/logo_claro_2.png"
                             alt="Redacción Central"
@@ -68,20 +68,20 @@ export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebar
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 space-y-2 px-4 py-8">
+                <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => onClose()} // Close on mobile navigation
-                                className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${isActive
-                                    ? "bg-white text-primary shadow-md"
-                                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                                onClick={() => onClose()}
+                                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
+                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+                                    : "text-slate-400 hover:bg-white/5 hover:text-white"
                                     }`}
                             >
-                                <item.icon className={`h-5 w-5 ${isActive ? "text-accent" : "text-white/70 group-hover:text-white"}`} />
+                                <item.icon className={`h-5 w-5 transition-colors ${isActive ? "text-white" : "text-slate-500 group-hover:text-white"}`} />
                                 {item.name}
                             </Link>
                         );
@@ -89,14 +89,14 @@ export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebar
                 </nav>
 
                 {/* Footer */}
-                <div className="border-t border-white/10 p-6 space-y-3">
-                    <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3 backdrop-blur-sm">
-                        <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-white">
+                <div className="border-t border-white/5 p-4 bg-[#0f172a]">
+                    <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-sm border border-white/5 mb-3">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
                             RC
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-medium text-white">Usuario Demo</span>
-                            <span className="text-[10px] text-white/60">Institución</span>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-sm font-medium text-white truncate">Usuario Demo</span>
+                            <span className="text-[10px] text-slate-400 truncate">Institución Verificada</span>
                         </div>
                     </div>
                     <LogoutButton />

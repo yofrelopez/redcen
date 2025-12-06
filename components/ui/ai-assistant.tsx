@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Button } from "./button"
-import { Card, CardContent, CardHeader, CardTitle } from "./card"
-import { generateHeadlines, generateSummary, suggestCategories } from "@/app/actions/ai"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { generateHeadlines, generateSummary, suggestCategories } from "@/actions/ai"
 
 interface AIAssistantProps {
     content: string
     title: string
-    categories: Array<{ id: string; name: string }>
+    categories: { id: string; name: string }[]
     onApplyHeadline?: (headline: string) => void
     onApplySummary?: (summary: string) => void
     onApplyCategories?: (categoryIds: string[]) => void
