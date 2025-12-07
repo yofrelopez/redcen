@@ -16,7 +16,7 @@ export default async function InstitutionProfilePage({ params }: PageProps) {
         notFound()
     }
 
-    const notes = await getNotesByInstitution(institution.id)
+    const { notes } = await getNotesByInstitution(institution.id)
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
