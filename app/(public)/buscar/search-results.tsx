@@ -24,6 +24,8 @@ interface SearchResultsProps {
     initialQuery?: string
     initialInstitutionId?: string
     initialCategoryIds?: string[]
+    initialDateRange?: string
+    initialSort?: string
 }
 
 export function SearchResults({
@@ -36,11 +38,15 @@ export function SearchResults({
     initialQuery = "",
     initialInstitutionId = "",
     initialCategoryIds = [],
+    initialDateRange = "all",
+    initialSort = "newest",
 }: SearchResultsProps) {
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState(initialQuery)
     const [selectedInstitution, setSelectedInstitution] = useState(initialInstitutionId)
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(initialCategoryIds))
+    const [dateRange, setDateRange] = useState(initialDateRange)
+    const [sort, setSort] = useState(initialSort)
     const [isPending, startTransition] = useTransition()
     const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined)
 
@@ -66,12 +72,14 @@ export function SearchResults({
     useEffect(() => {
         updateSearch()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedInstitution, selectedCategories])
+    }, [selectedInstitution, selectedCategories, dateRange, sort])
 
     const updateSearch = () => {
         const params = new URLSearchParams()
         if (searchQuery.trim()) params.set("q", searchQuery.trim())
         if (selectedInstitution) params.set("institution", selectedInstitution)
+        if (dateRange && dateRange !== "all") params.set("dateRange", dateRange)
+        if (sort && sort !== "newest") params.set("sort", sort)
         selectedCategories.forEach((cat) => params.append("categories", cat))
 
         // Note: We intentionally don't include 'page' here so it resets to page 1 on filter change
@@ -98,9 +106,11 @@ export function SearchResults({
         setSearchQuery("")
         setSelectedInstitution("")
         setSelectedCategories(new Set())
+        setDateRange("all")
+        setSort("newest")
     }
 
-    const hasActiveFilters = searchQuery || selectedInstitution || selectedCategories.size > 0
+    const hasActiveFilters = searchQuery || selectedInstitution || selectedCategories.size > 0 || dateRange !== "all" || sort !== "newest"
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -111,6 +121,10 @@ export function SearchResults({
                 setSelectedInstitution={setSelectedInstitution}
                 selectedCategories={selectedCategories}
                 toggleCategory={toggleCategory}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+                sort={sort}
+                setSort={setSort}
                 institutions={institutions}
                 categories={categories}
                 clearFilters={clearFilters}

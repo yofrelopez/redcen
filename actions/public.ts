@@ -92,23 +92,38 @@ export async function getInstitutionByEmail(email: string) {
     })
 }
 
-export async function getNotesByInstitution(authorId: string) {
-    return await prisma.pressNote.findMany({
-        where: {
-            authorId,
-            ...getVisibleNoteWhere()
-        },
-        orderBy: { createdAt: "desc" },
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    slug: true,
+export async function getNotesByInstitution(authorId: string, page: number = 1, limit: number = 12) {
+    const skip = (page - 1) * limit
+    const where = {
+        authorId,
+        ...getVisibleNoteWhere()
+    }
+
+    const [notes, total] = await Promise.all([
+        prisma.pressNote.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        slug: true,
+                    },
                 },
             },
-        },
-    })
+        }),
+        prisma.pressNote.count({ where }),
+    ])
+
+    return {
+        notes,
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+    }
 }
 
 export async function getInstitutionBySlug(slug: string) {

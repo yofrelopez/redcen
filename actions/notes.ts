@@ -227,27 +227,40 @@ export async function searchNotes({
     categoryIds,
     page = 1,
     limit = 10,
+    dateRange = "all",
+    sort = "newest",
 }: {
     query?: string
     institutionId?: string
     categoryIds?: string[]
     page?: number
     limit?: number
+    dateRange?: string
+    sort?: string
 }) {
     const where: any = {
         published: true,
-        OR: [
-            { scheduledFor: null },
-            { scheduledFor: { lte: new Date() } }
+        AND: [
+            {
+                OR: [
+                    { scheduledFor: null },
+                    { scheduledFor: { lte: new Date() } }
+                ]
+            }
         ]
     }
 
     if (query) {
-        where.OR = [
-            { title: { contains: query, mode: "insensitive" } },
-            { content: { contains: query, mode: "insensitive" } },
-            { summary: { contains: query, mode: "insensitive" } },
-        ]
+        where.AND.push({
+            OR: [
+                { title: { contains: query, mode: "insensitive" } },
+                { content: { contains: query, mode: "insensitive" } },
+                { summary: { contains: query, mode: "insensitive" } },
+                // Search in Author/Institution fields
+                { author: { name: { contains: query, mode: "insensitive" } } },
+                { author: { abbreviation: { contains: query, mode: "insensitive" } } },
+            ]
+        })
     }
 
     if (institutionId) {
@@ -258,6 +271,33 @@ export async function searchNotes({
         where.categoryIds = {
             hasSome: categoryIds,
         }
+    }
+
+    // Date Range Filter
+    if (dateRange && dateRange !== "all") {
+        const now = new Date()
+        const past = new Date()
+
+        if (dateRange === "24h") {
+            past.setDate(now.getDate() - 1)
+        } else if (dateRange === "7d") {
+            past.setDate(now.getDate() - 7)
+        } else if (dateRange === "30d") {
+            past.setDate(now.getDate() - 30)
+        } else if (dateRange === "year") {
+            past.setFullYear(now.getFullYear() - 1)
+        }
+
+        where.createdAt = {
+            gte: past,
+        }
+    }
+
+    // Sort Logic
+    let orderBy: any = { createdAt: "desc" } // Default "newest" or "relevance"
+
+    if (sort === "oldest") {
+        orderBy = { createdAt: "asc" }
     }
 
     const skip = (page - 1) * limit
@@ -276,7 +316,7 @@ export async function searchNotes({
                     },
                 },
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy,
             skip,
             take: limit,
         }),

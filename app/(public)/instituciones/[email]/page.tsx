@@ -7,14 +7,20 @@ import { es } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getInstitutionByEmail, getNotesByInstitution } from "@/actions/public"
 
+
+import { Pagination } from "@/components/ui/pagination"
+
+// ... imports
+
 interface InstitutionPageProps {
     params: Promise<{ email: string }>
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export async function generateMetadata({ params }: InstitutionPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ email: string }> }): Promise<Metadata> {
     const { email } = await params
     const institution = await getInstitutionByEmail(decodeURIComponent(email))
-
+    // ...
     if (!institution) {
         return {
             title: "Institución no encontrada",
@@ -27,15 +33,17 @@ export async function generateMetadata({ params }: InstitutionPageProps): Promis
     }
 }
 
-export default async function InstitutionPage({ params }: InstitutionPageProps) {
+export default async function InstitutionPage({ params, searchParams }: InstitutionPageProps) {
     const { email } = await params
+    const resolvedSearchParams = await searchParams
     const institution = await getInstitutionByEmail(decodeURIComponent(email))
 
     if (!institution) {
         notFound()
     }
 
-    const notes = await getNotesByInstitution(institution.id)
+    const page = typeof resolvedSearchParams.page === "string" ? parseInt(resolvedSearchParams.page) : 1
+    const { notes, totalPages, currentPage } = await getNotesByInstitution(institution.id, page)
 
     return (
         <div className="min-h-screen">
@@ -124,41 +132,47 @@ export default async function InstitutionPage({ params }: InstitutionPageProps) 
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {notes.map((note) => (
-                            <Link key={note.id} href={`/${note.author.slug}/${note.slug}`}>
-                                <Card className="group h-full flex flex-col overflow-hidden border-gray-200 hover:border-primary/30 hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-300">
-                                    {note.mainImage && (
-                                        <div className="relative w-full h-48 overflow-hidden bg-gray-100">
-                                            <Image
-                                                src={note.mainImage}
-                                                alt={note.title}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                    )}
+                    <>
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+                            {notes.map((note) => (
+                                <Link key={note.id} href={`/${note.author.slug}/${note.slug}`}>
+                                    <Card className="group h-full flex flex-col overflow-hidden border-gray-200 hover:border-primary/30 hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-300">
+                                        {note.mainImage && (
+                                            <div className="relative w-full h-48 overflow-hidden bg-gray-100">
+                                                <Image
+                                                    src={note.mainImage}
+                                                    alt={note.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                        )}
 
-                                    <CardHeader className="pb-3 space-y-3 flex-1">
-                                        <div className="flex justify-end items-start">
-                                            <span className="text-[10px] text-gray-400 font-medium">
-                                                {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true, locale: es })}
-                                            </span>
-                                        </div>
-                                        <CardTitle className="text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                                            {note.title}
-                                        </CardTitle>
-                                    </CardHeader>
+                                        <CardHeader className="pb-3 space-y-3 flex-1">
+                                            <div className="flex justify-end items-start">
+                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                    {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true, locale: es })}
+                                                </span>
+                                            </div>
+                                            <CardTitle className="text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                                                {note.title}
+                                            </CardTitle>
+                                        </CardHeader>
 
-                                    <CardContent className="pt-0">
-                                        <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed">
-                                            {note.summary || "Sin resumen disponible..."}
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
+                                        <CardContent className="pt-0">
+                                            <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed">
+                                                {note.summary || "Sin resumen disponible..."}
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="mt-8 flex justify-center">
+                            <Pagination totalPages={totalPages} currentPage={currentPage} />
+                        </div>
+                    </>
                 )}
             </section>
         </div>

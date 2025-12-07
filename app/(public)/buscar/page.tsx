@@ -12,9 +12,11 @@ export default async function SearchPage({
     const institutionId = typeof params.institution === "string" ? params.institution : undefined
     const categoryIds = Array.isArray(params.categories) ? params.categories : typeof params.categories === "string" ? [params.categories] : undefined
     const page = typeof params.page === "string" ? parseInt(params.page) : 1
+    const dateRange = typeof params.dateRange === "string" ? params.dateRange : undefined
+    const sort = typeof params.sort === "string" ? params.sort : undefined
 
     const [searchData, institutions, categories] = await Promise.all([
-        searchNotes({ query, institutionId, categoryIds, page }),
+        searchNotes({ query, institutionId, categoryIds, page, dateRange, sort }),
         getInstitutions(),
         getCategories(),
     ])
@@ -46,6 +48,8 @@ export default async function SearchPage({
                     initialQuery={query}
                     initialInstitutionId={institutionId}
                     initialCategoryIds={categoryIds}
+                    initialDateRange={dateRange}
+                    initialSort={sort}
                 />
             </div>
         </div>

@@ -13,8 +13,7 @@ export function HeaderPublic() {
 
     const navLinks = [
         { href: "/", label: "Inicio" },
-        { href: "/instituciones", label: "Instituciones" },
-        { href: "/categorias", label: "Categorías" },
+        { href: "/directorio", label: "Instituciones" },
     ]
 
     return (
