@@ -29,7 +29,7 @@ export const Iframe = Node.create<IframeOptions>({
         return {
             allowFullscreen: true,
             HTMLAttributes: {
-                class: 'w-full rounded-lg overflow-hidden border border-gray-200 bg-gray-50',
+                class: 'w-full rounded-lg overflow-hidden border border-gray-200 bg-gray-50 shadow-sm',
             },
         }
     },
@@ -61,7 +61,7 @@ export const Iframe = Node.create<IframeOptions>({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', { class: 'iframe-wrapper my-4' }, ['iframe', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]]
+        return ['div', { class: 'iframe-wrapper my-6 flex justify-center mx-auto w-full max-w-[85%] md:max-w-[75%]' }, ['iframe', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]]
     },
 
     addCommands() {
