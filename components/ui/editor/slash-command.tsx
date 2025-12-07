@@ -16,6 +16,10 @@ import {
     ImageIcon,
     MessageSquareQuote,
     CheckSquare,
+    Youtube as YoutubeIcon,
+    Facebook as FacebookIcon,
+    Music,
+    FileText,
 } from "lucide-react"
 
 interface CommandItemProps {
@@ -248,11 +252,94 @@ const getSuggestionItems = ({ query }: { query: string }) => {
             searchTerms: ["image", "picture", "photo"],
             icon: ImageIcon,
             command: ({ editor, range }: any) => {
-                // Dispatch event to open Cloudinary widget defined in parent
                 const event = new CustomEvent('open-cloudinary-upload', {
                     detail: { editor, range }
                 })
                 document.dispatchEvent(event)
+            },
+        },
+        {
+            title: "Youtube",
+            description: "Incrustar video de Youtube",
+            searchTerms: ["video", "youtube", "embed"],
+            icon: YoutubeIcon,
+            command: ({ editor, range }: any) => {
+                const url = prompt("Ingresa la URL del video de Youtube:")
+                if (url) {
+                    editor.chain().focus().deleteRange(range).setYoutubeVideo({
+                        src: url,
+                    }).run()
+                }
+            },
+        },
+        {
+            title: "Facebook",
+            description: "Incrustar post/video de Facebook",
+            searchTerms: ["facebook", "social", "embed"],
+            icon: FacebookIcon,
+            command: ({ editor, range }: any) => {
+                const url = prompt("Para posts privados/compartidos, usa la opción 'Insertar' de Facebook y pega el código aquí. \n\nO pega la URL directa del post:")
+                if (url) {
+                    // Extract src if full iframe code is pasted
+                    const srcMatch = url.match(/src="([^"]+)"/)
+                    let finalUrl = srcMatch ? srcMatch[1] : url
+
+                    // Transform standard Facebook URLs to Plugin URLs if needed
+                    if (finalUrl.includes('facebook.com') && !finalUrl.includes('plugins/')) {
+                        const encodedUrl = encodeURIComponent(finalUrl)
+                        // Guess if it's a video or a post/photo
+                        // Added /share/v/ for modern mobile share links
+                        if (finalUrl.includes('/videos/') || finalUrl.includes('/reel/') || finalUrl.includes('/watch') || finalUrl.includes('/share/v/')) {
+                            finalUrl = `https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false&width=560`
+                        } else {
+                            // Default to post plugin for everything else (photos, posts, shares)
+                            finalUrl = `https://www.facebook.com/plugins/post.php?href=${encodedUrl}&width=500`
+                        }
+                    }
+
+                    editor.chain().focus().deleteRange(range).setIframe({
+                        src: finalUrl,
+                    }).run()
+                }
+            },
+        },
+        {
+            title: "Spotify Podcast",
+            description: "Incrustar episodio de Spotify",
+            searchTerms: ["spotify", "music", "podcast", "audio"],
+            icon: Music,
+            command: ({ editor, range }: any) => {
+                const url = prompt("Ingresa la URL del episodio de Spotify (o código embed):")
+                if (url) {
+                    // Extract src if full iframe code is pasted
+                    const srcMatch = url.match(/src="([^"]+)"/)
+                    const finalUrl = srcMatch ? srcMatch[1] : url
+
+                    editor.chain().focus().deleteRange(range).setIframe({
+                        src: finalUrl,
+                    }).run()
+                }
+            },
+        },
+        {
+            title: "PDF / Drive",
+            description: "Incrustar documento PDF de Google Drive",
+            searchTerms: ["pdf", "document", "drive", "embed"],
+            icon: FileText,
+            command: ({ editor, range }: any) => {
+                const url = prompt("Ingresa la URL pública del archivo (Google Drive/Docs):")
+                if (url) {
+                    // Convert view links to preview/embed links for Drive
+                    let finalUrl = url;
+                    if (url.includes('drive.google.com')) {
+                        // Replace /view or /edit with /preview and strip query params often used in sharing
+                        finalUrl = url.replace(/\/view.*/, '/preview').replace(/\/edit.*/, '/preview');
+                    }
+
+                    editor.chain().focus().deleteRange(range).setIframe({
+                        src: finalUrl,
+                    }).run()
+                }
             },
         },
     ].filter((item) => {

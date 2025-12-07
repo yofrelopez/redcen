@@ -16,6 +16,7 @@ export function InstitutionHeader({ institution }: InstitutionHeaderProps) {
                     alt={`Portada de ${institution.name}`}
                     fill
                     className="object-cover opacity-80"
+                    sizes="100vw"
                     priority
                 />
             ) : (

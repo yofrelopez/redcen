@@ -54,7 +54,7 @@ export function PublicNoteCard({ note }: PublicNoteCardProps) {
                     >
                         {note.author.logo && (
                             <div className="relative h-5 w-5 rounded-full overflow-hidden border border-gray-100">
-                                <Image src={note.author.logo} alt="" fill className="object-cover" />
+                                <Image src={note.author.logo} alt="" fill className="object-cover" sizes="20px" />
                             </div>
                         )}
                         <span className="text-[11px] uppercase font-bold tracking-wider text-gray-500 group-hover/author:text-primary transition-colors">

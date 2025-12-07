@@ -10,6 +10,8 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 // import Image from '@tiptap/extension-image' // Removed standard image
+import Youtube from '@tiptap/extension-youtube'
+import { Iframe } from '@/components/ui/editor/extensions/iframe-extension'
 import { ImageExtended } from '@/components/ui/extensions/image-extended'
 import { slashCommand } from "@/components/ui/editor/slash-command"
 import { Bold, Italic, List, ListOrdered, Quote, Heading2, Heading3, Link as LinkIcon, Undo, Redo } from 'lucide-react'
@@ -22,6 +24,7 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, editable = true }: RichTextEditorProps) {
+    // ... refs ...
     const uploadBtnRef = useRef<HTMLButtonElement>(null)
     const editorRef = useRef<any>(null)
     const rangeRef = useRef<any>(null)
@@ -30,6 +33,7 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
         if (editorRef.current && result.info.secure_url) {
             const url = result.info.secure_url
             if (rangeRef.current) {
+                // Use chain() to ensure focus and range maintenance
                 editorRef.current.chain().focus().deleteRange(rangeRef.current).setImage({ src: url }).run()
             } else {
                 editorRef.current.chain().focus().setImage({ src: url }).run()
@@ -59,6 +63,14 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                     class: 'rounded-lg border border-gray-200 shadow-sm my-4 max-w-full',
                 },
             }),
+            Youtube.configure({
+                controls: false,
+                nocookie: true,
+                HTMLAttributes: {
+                    class: 'rounded-lg overflow-hidden border border-gray-200 shadow-sm my-4 w-full aspect-video',
+                },
+            }),
+            Iframe,
             slashCommand,
         ],
         content,
