@@ -26,29 +26,29 @@ export function NoteHeader({ title, summary, author, createdAt, url, views, read
     return (
         <header className="mb-2 max-w-4xl mx-auto">
             {/* Meta Top */}
-            <div className="flex flex-wrap items-center gap-3 text-sm mb-6">
-                <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/5 px-3 py-1 uppercase tracking-wider text-[10px] font-bold">
+            <div className="flex items-center gap-2 text-xs mb-3 overflow-x-auto whitespace-nowrap scrollbar-hide text-gray-500">
+                <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/5 px-2 py-0.5 uppercase tracking-wider text-[9px] font-bold shrink-0">
                     Nota de Prensa
                 </Badge>
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-200">|</span>
 
-                <div className="flex items-center gap-1.5 text-gray-500 font-medium">
+                <div className="flex items-center gap-1 font-medium shrink-0">
                     <Calendar className="w-3.5 h-3.5" />
                     <time dateTime={createdAt.toISOString()}>
                         {format(new Date(createdAt), "dd/MM/yy", { locale: es })}
                     </time>
                 </div>
 
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-200">|</span>
 
-                <div className="flex items-center gap-1.5 text-gray-500 font-medium" title="Tiempo de lectura">
+                <div className="flex items-center gap-1 font-medium shrink-0" title="Tiempo de lectura">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>{readingTime}</span>
+                    <span>{readingTime.replace(" de lectura", "")}</span>
                 </div>
 
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-200">|</span>
 
-                <div className="flex items-center gap-1.5 text-gray-500 font-medium" title="Visualizaciones">
+                <div className="flex items-center gap-1 font-medium shrink-0" title="Visualizaciones">
                     <Eye className="w-3.5 h-3.5" />
                     <span>{views}</span>
                 </div>

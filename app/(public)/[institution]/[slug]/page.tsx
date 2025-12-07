@@ -7,9 +7,10 @@ import { NoteHeader } from "@/components/notes/public/note-header"
 import { NoteImage } from "@/components/notes/public/note-image"
 import { NoteContent } from "@/components/notes/public/note-content"
 import { NoteFooter } from "@/components/notes/public/note-footer"
+import { NoteGallery } from "@/components/notes/public/note-gallery"
 
 import { MoreFromAuthor } from "@/components/notes/public/more-from-author"
-import { LatestNotesGrid } from "@/components/home/latest-notes-grid"
+import { LatestNewsSection } from "@/components/notes/public/latest-news-section"
 
 interface NotePageProps {
     params: Promise<{
@@ -90,7 +91,7 @@ export default async function NotePage({ params }: NotePageProps) {
     // Parallel data fetching for related content
     const [moreFromAuthor, latestNotes] = await Promise.all([
         getMoreNotesFromAuthor(note.authorId, 3, note.id),
-        getRecentNotes(3, note.id)
+        getRecentNotes(4, note.id)
     ])
 
     // Increment view count
@@ -109,7 +110,7 @@ export default async function NotePage({ params }: NotePageProps) {
             />
 
             <article className="min-h-screen">
-                <div className="container mx-auto px-4 py-12 max-w-4xl">
+                <div className="container mx-auto px-4 py-4 md:py-12 max-w-4xl">
                     <NoteHeader
                         title={note.title}
                         summary={note.summary}
@@ -127,6 +128,8 @@ export default async function NotePage({ params }: NotePageProps) {
 
                     <NoteContent content={note.content} />
 
+                    <NoteGallery images={note.gallery} />
+
                     <NoteFooter author={note.author} />
 
                     <MoreFromAuthor
@@ -134,11 +137,11 @@ export default async function NotePage({ params }: NotePageProps) {
                         institutionName={note.author.name || ""}
                         institutionSlug={note.author.slug || ""}
                         institutionEmail={note.author.email}
+                        institutionAbbreviation={note.author.abbreviation}
                     />
 
-                    <div className="border-t border-gray-100 mt-12 pt-12">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-8">Últimas Noticias</h2>
-                        <LatestNotesGrid notes={latestNotes} />
+                    <div className="border-t border-gray-100 mt-6 pt-6">
+                        <LatestNewsSection notes={latestNotes} />
                     </div>
                 </div>
             </article>
