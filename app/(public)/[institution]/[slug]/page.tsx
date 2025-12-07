@@ -91,7 +91,7 @@ export default async function NotePage({ params }: NotePageProps) {
     // Parallel data fetching for related content
     const [moreFromAuthor, latestNotes] = await Promise.all([
         getMoreNotesFromAuthor(note.authorId, 3, note.id),
-        getRecentNotes(4, note.id)
+        getRecentNotes(12, note.id)
     ])
 
     // Increment view count
