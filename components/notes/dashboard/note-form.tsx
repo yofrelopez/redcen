@@ -34,15 +34,23 @@ interface NoteFormProps {
         tags: string[]
     }
     categories: Array<{ id: string; name: string }>
+    institutions?: Array<{ id: string; name: string | null; email: string; logo: string | null }> // New
+    isAdmin?: boolean // New
     action: (formData: FormData) => Promise<any>
 }
 
 import { NoteTypeSelector } from "@/components/ui/note-type-selector"
+import { AuthorSelector } from "./author-selector" // New Component to create
 
-export function NoteForm({ initialData, categories, action }: NoteFormProps) {
+import { useRouter } from "next/navigation"
+
+export function NoteForm({ initialData, categories, institutions = [], isAdmin = false, action }: NoteFormProps) {
+    const router = useRouter()
     const [isPending, startTransition] = useTransition()
 
     // Key Content State
+    // ... existing ... 
+    const [authorId, setAuthorId] = useState("") // New state for impersonation
     const [title, setTitle] = useState(initialData?.title || "")
     const [summary, setSummary] = useState(initialData?.summary || "")
     const [content, setContent] = useState(initialData?.content || "")
@@ -133,6 +141,11 @@ export function NoteForm({ initialData, categories, action }: NoteFormProps) {
         formData.delete("tags")
         tags.forEach(tag => formData.append("tags", tag))
 
+        // Optional Impersonation
+        if (authorId && authorId !== "me") {
+            formData.set("impersonatedAuthorId", authorId)
+        }
+
         startTransition(async () => {
             try {
                 const result = await action(formData)
@@ -140,6 +153,18 @@ export function NoteForm({ initialData, categories, action }: NoteFormProps) {
                     toast.error(result.error)
                 } else {
                     toast.success("Nota guardada correctamente")
+                    // If isAdmin, we might want to go to /dashboard/admin/notas, strictly speaking
+                    // But currently the edit page is shared. Let's redirect to standard /dashboard/notas
+                    // or ideally check where they came from. For now, standard dashboard.
+                    // Improving: redirect based on isAdmin prop is risky if they are editing their own notes.
+                    // Let's stick to /dashboard/notas for consistency, or /dashboard/admin/notas if the user IS an admin to facilitate workflow.
+
+                    if (isAdmin) {
+                        router.push("/dashboard/admin/notas")
+                    } else {
+                        router.push("/dashboard/notas")
+                    }
+                    router.refresh()
                 }
             } catch (error) {
                 toast.error("Error al guardar la nota")
@@ -175,6 +200,15 @@ export function NoteForm({ initialData, categories, action }: NoteFormProps) {
 
                     {/* Settings Sidebar (Right - Fixed Width & Compact) */}
                     <div className="w-full lg:w-[220px] xl:w-[240px] flex-shrink-0 space-y-4">
+                        {/* Admin Impersonation */}
+                        {isAdmin && (
+                            <AuthorSelector
+                                institutions={institutions}
+                                value={authorId}
+                                onChange={setAuthorId}
+                            />
+                        )}
+
                         <NoteFormActions
                             isPublished={isPublished}
                             setIsPublished={setIsPublished}

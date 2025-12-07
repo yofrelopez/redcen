@@ -22,13 +22,25 @@ const TagIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><path d="M7 7h.01" /></svg>
 );
 
+const UsersIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+);
+
+const GlobeIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>
+);
+
 interface DashboardSidebarProps {
     isOpen: boolean;
     onClose: () => void;
-    userRole?: string;
+    user: {
+        name: string | null;
+        email: string | null;
+        role: string;
+    };
 }
 
-export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebarProps) {
+export function DashboardSidebar({ isOpen, onClose, user }: DashboardSidebarProps) {
     const pathname = usePathname();
 
     const navItems = [
@@ -37,9 +49,11 @@ export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebar
         { name: "Perfil", href: "/dashboard/perfil", icon: UserIcon },
     ];
 
-    // Add Categories link for admin users
-    if (userRole === "ADMIN") {
-        navItems.splice(2, 0, { name: "Categorías", href: "/dashboard/categorias", icon: TagIcon });
+    // Add Categories and Users link for admin users
+    if (user.role === "ADMIN") {
+        navItems.splice(2, 0, { name: "Usuarios", href: "/dashboard/admin/usuarios", icon: UsersIcon });
+        navItems.splice(3, 0, { name: "Moderación", href: "/dashboard/admin/notas", icon: GlobeIcon });
+        navItems.splice(4, 0, { name: "Categorías", href: "/dashboard/categorias", icon: TagIcon });
     }
 
     return (
@@ -91,12 +105,14 @@ export function DashboardSidebar({ isOpen, onClose, userRole }: DashboardSidebar
                 {/* Footer */}
                 <div className="border-t border-white/5 p-4 bg-[#0f172a]">
                     <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-sm border border-white/5 mb-3">
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
-                            RC
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-inner ${user.role === 'ADMIN' ? 'bg-gradient-to-br from-amber-500 to-red-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'}`}>
+                            {user.name ? user.name.substring(0, 2).toUpperCase() : 'RC'}
                         </div>
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-sm font-medium text-white truncate">Usuario Demo</span>
-                            <span className="text-[10px] text-slate-400 truncate">Institución Verificada</span>
+                            <span className="text-sm font-medium text-white truncate">{user.name || "Usuario"}</span>
+                            <span className={`text-[10px] truncate uppercase tracking-wider font-semibold ${user.role === 'ADMIN' ? 'text-amber-400' : 'text-slate-400'}`}>
+                                {user.role === 'ADMIN' ? 'Administrador' : 'Institución'}
+                            </span>
                         </div>
                     </div>
                     <LogoutButton />

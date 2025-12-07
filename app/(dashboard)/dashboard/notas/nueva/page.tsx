@@ -1,10 +1,18 @@
 
-import Link from "next/link"
 import { getCategories } from "@/actions/categories"
+import { getInstitutions } from "@/actions/notes"
+import { requireAuth } from "@/lib/auth-helpers"
 import { NewNoteForm } from "./new-note-form"
+import Link from "next/link"
 
 export default async function NewNotePage() {
-    const categories = await getCategories()
+    const session = await requireAuth()
+    const isAdmin = session.user.role === "ADMIN"
+
+    const [categories, institutions] = await Promise.all([
+        getCategories(),
+        isAdmin ? getInstitutions() : Promise.resolve([])
+    ])
 
     return (
         <div className="w-full max-w-[1920px] mx-auto pb-10 px-4 sm:px-6 lg:px-8">
@@ -21,7 +29,11 @@ export default async function NewNotePage() {
                 </div>
             </div>
 
-            <NewNoteForm categories={categories} />
+            <NewNoteForm
+                categories={categories}
+                institutions={institutions}
+                isAdmin={isAdmin}
+            />
         </div>
     )
 }

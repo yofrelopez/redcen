@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+
 
 export async function createNote(formData: FormData) {
     const session = await requireAuth()
@@ -31,6 +31,16 @@ export async function createNote(formData: FormData) {
 
     const isPublished = formData.get("published") === "on"
 
+    // Ghost Mode: Admin Impersonation
+    let authorId = session.user.id
+    const impersonatedAuthorId = formData.get("impersonatedAuthorId") as string
+
+    if (session.user.role === "ADMIN" && impersonatedAuthorId) {
+        // Validate that the impersonated ID exists (optional but good practice)
+        // For now, we trust the form data since it's an admin action
+        authorId = impersonatedAuthorId
+    }
+
     try {
         if (!title || !content) {
             return { error: "Título y contenido son obligatorios" }
@@ -42,7 +52,7 @@ export async function createNote(formData: FormData) {
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)+/g, "") + "-" + Date.now()
 
-        console.log("Creating note with data:", { title, slug, authorId: session.user.id })
+        console.log("Creating note with data:", { title, slug, authorId })
 
         await prisma.pressNote.create({
             data: {
@@ -63,18 +73,16 @@ export async function createNote(formData: FormData) {
                 metaDescription,
                 tags,
                 scheduledFor,
-                authorId: session.user.id,
+                authorId, // Use the determined authorId
                 published: isPublished,
             },
         })
 
-        revalidatePath("/dashboard/notas")
+        return { success: true }
     } catch (error: any) {
         console.error("Error creating note:", error)
         return { error: error.message || "Error interno al crear la nota" }
     }
-
-    redirect("/dashboard/notas")
 }
 
 export async function updateNote(id: string, formData: FormData) {
@@ -101,41 +109,57 @@ export async function updateNote(id: string, formData: FormData) {
     const scheduledForStr = formData.get("scheduledFor") as string
     const scheduledFor = scheduledForStr ? new Date(scheduledForStr) : null
 
+    // Impersonation for update (transfer ownership) - Advanced use case, mostly likely just keeping existing author
+    // If we wanted to allow changing author on update:
+    // const impersonatedAuthorId = formData.get("impersonatedAuthorId") as string
+    // But typically updates just change content.
+
     // Verify ownership
     const note = await prisma.pressNote.findUnique({
         where: { id },
     })
 
-    if (!note || note.authorId !== session.user.id) {
+    if (!note) {
+        throw new Error("Nota no encontrada")
+    }
+
+    // Allow Admin to bypass ownership check
+    if (note.authorId !== session.user.id && session.user.role !== "ADMIN") {
         throw new Error("No tienes permiso para editar esta nota")
     }
 
-    await prisma.pressNote.update({
-        where: { id },
-        data: {
-            title,
-            content,
-            summary,
-            mainImage: mainImage || null,
-            mainImageAlt: mainImageAlt || null,
-            mainImageCaption: mainImageCaption || null,
-            gallery,
-            categoryIds,
-            published,
-            type: noteType as any,
-            region,
-            province,
-            district,
-            metaTitle,
-            metaDescription,
-            tags,
-            scheduledFor,
-        },
-    })
+    try {
+        await prisma.pressNote.update({
+            where: { id },
+            data: {
+                title,
+                content,
+                summary,
+                mainImage: mainImage || null,
+                mainImageAlt: mainImageAlt || null,
+                mainImageCaption: mainImageCaption || null,
+                gallery,
+                categoryIds,
+                published,
+                type: noteType as any,
+                region,
+                province,
+                district,
+                metaTitle,
+                metaDescription,
+                tags,
+                scheduledFor,
+            },
+        })
 
-    revalidatePath("/dashboard/notas")
-    revalidatePath(`/dashboard/notas/${id}`)
-    redirect("/dashboard/notas")
+        revalidatePath("/dashboard/notas")
+        revalidatePath(`/dashboard/notas/${id}`)
+
+        return { success: true }
+    } catch (error: any) {
+        console.error("Error updating note:", error)
+        return { error: error.message || "Error al actualizar la nota" }
+    }
 }
 
 export async function deleteNote(id: string) {
@@ -146,7 +170,12 @@ export async function deleteNote(id: string) {
         where: { id },
     })
 
-    if (!note || note.authorId !== session.user.id) {
+    if (!note) {
+        throw new Error("Nota no encontrada")
+    }
+
+    // Allow Admin to bypass ownership check
+    if (note.authorId !== session.user.id && session.user.role !== "ADMIN") {
         throw new Error("No tienes permiso para eliminar esta nota")
     }
 
@@ -175,6 +204,8 @@ export async function getNotes() {
     })
 }
 
+// ... (previous code)
+
 export async function getNote(id: string) {
     const session = await requireAuth()
 
@@ -182,7 +213,8 @@ export async function getNote(id: string) {
         where: { id },
     })
 
-    if (!note || note.authorId !== session.user.id) {
+    // Allow owner OR admin
+    if (!note || (note.authorId !== session.user.id && session.user.role !== "ADMIN")) {
         return null
     }
 
@@ -240,6 +272,7 @@ export async function searchNotes({
                         logo: true,
                         email: true,
                         abbreviation: true,
+                        slug: true,
                     },
                 },
             },
@@ -269,4 +302,64 @@ export async function getInstitutions() {
         },
         orderBy: { name: "asc" },
     })
+}
+
+export async function getGlobalNotes({
+    page = 1,
+    query = "",
+    institutionId = "",
+}: {
+    page?: number
+    query?: string
+    institutionId?: string
+}) {
+    const session = await requireAuth()
+
+    if (session.user.role !== "ADMIN") {
+        throw new Error("No autorizado")
+    }
+
+    const limit = 10
+    const skip = (page - 1) * limit
+
+    const where: any = {}
+
+    if (query) {
+        where.OR = [
+            { title: { contains: query, mode: "insensitive" } },
+            { content: { contains: query, mode: "insensitive" } },
+            { summary: { contains: query, mode: "insensitive" } },
+        ]
+    }
+
+    if (institutionId && institutionId !== "ALL") {
+        where.authorId = institutionId
+    }
+
+    const [notes, total] = await Promise.all([
+        prisma.pressNote.findMany({
+            where,
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        abbreviation: true,
+                        logo: true,
+                        slug: true,
+                    },
+                },
+            },
+            orderBy: { updatedAt: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.pressNote.count({ where }),
+    ])
+
+    return {
+        notes,
+        total,
+        totalPages: Math.ceil(total / limit),
+    }
 }

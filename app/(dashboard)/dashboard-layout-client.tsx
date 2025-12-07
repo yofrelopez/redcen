@@ -6,10 +6,14 @@ import Image from "next/image";
 
 export function DashboardLayoutClient({
     children,
-    userRole,
+    user,
 }: {
     children: React.ReactNode;
-    userRole: string;
+    user: {
+        name: string | null;
+        email: string | null;
+        role: string;
+    };
 }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -19,7 +23,7 @@ export function DashboardLayoutClient({
             <DashboardSidebar
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
-                userRole={userRole}
+                user={user}
             />
 
             {/* Main Content Area */}
