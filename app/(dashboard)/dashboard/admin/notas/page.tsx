@@ -2,6 +2,7 @@ import { getGlobalNotes, getInstitutions } from "@/actions/notes"
 import { requireAuth } from "@/lib/auth-helpers"
 import { AdminNotesTable } from "@/components/admin/admin-notes-table"
 import { AdminNotesToolbar } from "@/components/admin/admin-notes-toolbar"
+import { Pagination } from "@/components/ui/pagination"
 import { redirect } from "next/navigation"
 
 export const metadata = {
@@ -53,12 +54,12 @@ export default async function AdminNotesPage({
 
             <AdminNotesTable notes={notes} />
 
-            {/* Pagination (Simple for now) */}
-            <div className="flex items-center justify-between px-2 text-sm text-muted-foreground">
+            {/* Pagination */}
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 px-2 text-sm text-muted-foreground">
                 <div>
-                    Total: {total} notas
+                    Mostrando {(currentPage - 1) * 10 + 1} - {Math.min(currentPage * 10, total)} de {total} notas
                 </div>
-                {/* We can add a Pagination component here later if needed reusing the one from public view or shadcn */}
+                <Pagination totalPages={totalPages} currentPage={currentPage} />
             </div>
         </div>
     )
