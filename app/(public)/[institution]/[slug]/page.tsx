@@ -62,57 +62,136 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
                         alt: note.title,
                     }
                 ] : [],
-            }
+                locale: "es_PE",
+            },
+            twitter: {
+                card: "summary_large_image",
+                title: note.metaTitle || note.title,
+                description,
+                images: note.mainImage ? [note.mainImage] : [],
+            },
+            alternates: {
+                canonical: url,
+            },
+        }
+    } catch (error) {
+        console.error("Error generating metadata:", error)
+        return {
+            title: SITE_NAME,
+        }
+    }
+}
+
+export default async function NotePage({ params }: NotePageProps) {
+    let note;
+    let institutionParam;
+    let slugParam;
+
+    try {
+        console.log("DEBUG: NotePage started")
+        const resolvedParams = await params
+        console.log("DEBUG: Resolved Params:", resolvedParams)
+        const { institution, slug } = resolvedParams
+        institutionParam = institution
+        slugParam = slug
+
+        console.log(`DEBUG: Fetching note for ${institution}/${slug}`)
+        note = await getNoteByInstitutionAndSlug(institution, slug)
+        console.log("DEBUG: Note fetch result:", note ? "Found" : "Null")
+    } catch (error) {
+        console.error("CRITICAL DEBUG: Error fetching note:", error)
+        notFound()
+    }
+
+    if (!note) {
+        console.log("DEBUG: Note not found, returning 404")
+        notFound()
+    }
+
+    // Get categories for JSON-LD
+    const allCategories = await getCategories().catch(err => {
+        console.error("DEBUG: Category fetch failed", err)
+        return []
+    })
+    const noteCategories = allCategories.filter(cat => note.categoryIds.includes(cat.id))
+    const articleSchema = generateArticleSchema(note, noteCategories)
+
+    // Parallel data fetching for related content
+    console.log("DEBUG: Fetching related content")
+    let moreFromAuthor: any[] = [];
+    let latestNotes: any[] = [];
+
+    try {
+        const results = await Promise.all([
+            getMoreNotesFromAuthor(note.authorId, 3, note.id).catch(err => {
+                console.error("DEBUG: MoreFromAuthor failed", err); return []
+            }),
+            getRecentNotes(12, note.id).catch(err => {
+                console.error("DEBUG: RecentNotes failed", err); return []
+            })
+        ])
+        moreFromAuthor = results[0]
+        latestNotes = results[1]
+        console.log("DEBUG: Related content fetched")
+    } catch (e) {
+        console.error("DEBUG: Related content Promise.all failed", e)
+    }
+
+    // Increment view count (fire and forget, don't block render)
+    try {
+        await incrementNoteView(note.id)
+    } catch (e) {
+        console.error("Failed to increment view count", e)
+    }
 
     // Calculate reading time
     const words = note.content ? note.content.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0
     const readingTime = Math.ceil(words / 200) + " min de lectura"
 
-    return(
+    return (
         <>
-            {/* JSON-LD Structured Data */ }
-            < script
-        type = "application/ld+json"
-        dangerouslySetInnerHTML = {{ __html: JSON.stringify(articleSchema) }
-    }
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
             />
 
-        < article className = "min-h-screen" >
-            <div className="container mx-auto px-4 py-4 md:py-12 max-w-4xl">
-                <NoteHeader
-                    title={note.title}
-                    summary={note.summary}
-                    author={note.author}
-                    createdAt={note.createdAt}
-                    url={`${SITE_URL}/${institutionParam ?? ""}/${slugParam ?? ""}`}
-                    views={note.views + 1} // +1 to reflect current view
-                    readingTime={readingTime}
-                />
+            <article className="min-h-screen">
+                <div className="container mx-auto px-4 py-4 md:py-12 max-w-4xl">
+                    <NoteHeader
+                        title={note.title}
+                        summary={note.summary}
+                        author={note.author}
+                        createdAt={note.createdAt}
+                        url={`${SITE_URL}/${institutionParam ?? ""}/${slugParam ?? ""}`}
+                        views={note.views + 1} // +1 to reflect current view
+                        readingTime={readingTime}
+                    />
 
-                <NoteImage
-                    src={note.mainImage}
-                    alt={note.title}
-                />
+                    <NoteImage
+                        src={note.mainImage}
+                        alt={note.title}
+                    />
 
-                <NoteContent content={note.content} />
+                    <NoteContent content={note.content} />
 
-                <NoteGallery images={note.gallery} />
+                    <NoteGallery images={note.gallery} />
 
-                <NoteFooter author={note.author} />
+                    <NoteFooter author={note.author} />
 
-                <MoreFromAuthor
-                    notes={moreFromAuthor}
-                    institutionName={note.author.name || ""}
-                    institutionSlug={note.author.slug || ""}
-                    institutionEmail={note.author.email}
-                    institutionAbbreviation={note.author.abbreviation}
-                />
+                    <MoreFromAuthor
+                        notes={moreFromAuthor}
+                        institutionName={note.author.name || ""}
+                        institutionSlug={note.author.slug || ""}
+                        institutionEmail={note.author.email}
+                        institutionAbbreviation={note.author.abbreviation}
+                    />
 
-                <div className="border-t border-gray-100 mt-6 pt-6">
-                    <LatestNewsSection notes={latestNotes} />
+                    <div className="border-t border-gray-100 mt-6 pt-6">
+                        <LatestNewsSection notes={latestNotes} />
+                    </div>
                 </div>
-            </div>
-            </article >
+            </article>
         </>
     )
 }
