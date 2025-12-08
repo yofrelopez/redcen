@@ -96,7 +96,7 @@ async function processWithGroq(text: string, dateContext: string) {
     }
 
     const prompt = `
-    Actúa como un **Jefe de Redacción** de "Redacción Central". Tu misión es transformar este post de Facebook en una **Nota de Prensa Profesional**.
+    Actúa como un **Redactor Senior** de "Redacción Central". Tu misión es transformar este reporte crudo en una **Crónica Periodística de Alto Impacto**.
 
     CONTEXTO:
     - Fuente Original: Facebook Institucional
@@ -105,34 +105,43 @@ async function processWithGroq(text: string, dateContext: string) {
     TEXTO ORIGINAL:
     "${text}"
 
-    INSTRUCCIONES DE REDACCIÓN (ESTRICTAS):
-    1. **NO INVENTES NADA**: Solo usa los datos del texto. Si falta información, omítela, no la rellenes.
-    2. **TÍTULO CON GANCHO**: Prohibido usar "Ceremonia de..." o "Reunión de...". Busca la noticia real. 
-       - Malo: "Ceremonia de entrega de ambulancia"
-       - Bueno: "Hospital Regional recibe nueva ambulancia para atender emergencias"
-    3. **ESTRUCTURA PERIODÍSTICA**:
-       - **Lead (Primer párrafo)**: Responde Qué, Quién, Cuándo y Dónde.
-       - **Cuerpo**: Desarrolla los detalles.
-         * Usa etiquetas **<h3>** para agregar 1 o 2 subtítulos que organicen la lectura.
-         * Usa etiquetas **<strong>** para resaltar nombres propios importantes o cifras clave.
-         * Usa etiquetas **<p>** para separar claramente cada párrafo.
-       - **Cierre**: Menciona explícitamente: "Información publicada originalmente por la institución el ${dateContext}."
-    4. **TONO**: Profesional pero dinámico. Elimina saludos ("Hola amigos") y hashtags.
+    MANUAL DE ESTILO (VOZ HUMANA):
+    1. **Cero Burocracia**: Elimina palabras como "realizó", "efectuó", "llevó a cabo". Usa verbos de acción: "inauguró", "lanzó", "confrontó".
+    2. **Foco en el Impacto**: No digas que "hubo una reunión". Di qué se decidió o cómo afecta al ciudadano.
+    3. **Voz Activa**: "El alcalde firmó el decreto" (Bien) vs "El decreto fue firmado por el alcalde" (Mal).
+    4. **Narrativa**: Cuenta una historia. Empieza con el dato más sorprendente o humano.
+    
+    INSTRUCCIONES DE ESTRUCTURA:
+    1. **NO INVENTES NADA**: Solo usa los datos del texto.
+    2. **TÍTULO**: Periodístico, corto y con verbo fuerte. (Ej: "Hospital Regional suma nueva ambulancia para reducir tiempos de espera").
+    3. **CUERPO HTML**:
+       - <strong>Lead</strong>: Un primer párrafo potente que enganche.
+       - <h3>Subtítulos</h3>: Usa 1 o 2 para romper el texto.
+       - <p>Párrafos cortos</p>: Máximo 3-4 líneas por párrafo.
+    4. **CIERRE**: Atribución clara ("Según informó la institución el ${dateContext}...").
+
+    INSTRUCCIONES SEO:
+    - **Meta Title**: < 60 chars, keyword al inicio.
+    - **Meta Description**: < 160 chars, provocativa.
+    - **Tags**: 5-8 keywords.
 
     RESPONDE ESTRICTAMENTE EN FORMATO JSON:
     {
       "isRelevant": boolean,
-      "title": "Título periodístico aquí",
-      "summary": "Resumen potente de 20-30 palabras.",
-      "content": "Contenido HTML enriquecido (<h3>, <strong>, <p>).",
-      "category": "Sociedad"
+      "title": "Título periodístico",
+      "summary": "Resumen",
+      "content": "HTML enriquecido",
+      "category": "Política/Sociedad/Economía",
+      "metaTitle": "SEO Title",
+      "metaDescription": "SEO Desc",
+      "tags": ["tag1", "tag2"]
     }
     `
 
     try {
         const completion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "Eres un redactor de noticias estricto y veraz. Respondes solo JSON." },
+                { role: "system", content: "Eres un periodista digital galardonado por tu estilo directo y humano." },
                 { role: "user", content: prompt }
             ],
             // Usamos un modelo estable y gratuito/barato de Groq
@@ -255,7 +264,11 @@ async function runScraper() {
                     publishedAt: postDate,
                     mainImage: mainImage,
                     gallery: gallery,
-                    category: aiData.category
+                    category: aiData.category,
+                    // SEO Pack (Groq Generated)
+                    metaTitle: aiData.metaTitle,
+                    metaDescription: aiData.metaDescription,
+                    tags: aiData.tags
                 }
 
                 console.log(`📦 Enviando Nota: "${payload.title}"`)

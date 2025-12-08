@@ -14,6 +14,10 @@ const ingestSchema = z.object({
     sourceUrl: z.string().url(),
     publishedAt: z.string().datetime().optional(), // Fecha original del post
     category: z.string().optional(),
+    // SEO Fields
+    metaTitle: z.string().optional(),
+    metaDescription: z.string().optional(),
+    tags: z.array(z.string()).optional(),
     institutionMatch: z.object({
         slug: z.string().optional(),
         name: z.string().optional(),
@@ -44,9 +48,7 @@ export async function POST(req: NextRequest) {
         const data = validation.data
 
         // 3. Encontrar Institución (Autor)
-        // Intentamos buscar por slug primero, si no, rechazamos
         let providerId = ""
-
         if (data.institutionMatch.slug) {
             const institution = await prisma.user.findUnique({
                 where: { slug: data.institutionMatch.slug, role: "INSTITUTION" }
@@ -58,14 +60,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Institution not found" }, { status: 404 })
         }
 
-        // 4. Verificar Duplicados (Por Slug generado o Source URL si lo tuviéramos)
-        // Generamos slug simple basado en título + fecha para unicidad
+        // 4. Verificar Duplicados
         const rawSlug = data.title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)+/g, "")
 
-        // Check rápido si ya existe algo con titulo muy similar reciente
         const existingNote = await prisma.pressNote.findFirst({
             where: {
                 slug: { startsWith: rawSlug },
@@ -80,6 +80,13 @@ export async function POST(req: NextRequest) {
         const finalSlug = `${rawSlug}-${Date.now()}`
 
         // 5. Crear Nota
+        // Combinar tags automáticos con los de la IA
+        const finalTags = new Set(["Automático", "Facebook"])
+        if (data.category) finalTags.add(data.category)
+        if (data.tags && Array.isArray(data.tags)) {
+            data.tags.forEach(t => finalTags.add(t))
+        }
+
         const newNote = await prisma.pressNote.create({
             data: {
                 title: data.title,
@@ -88,12 +95,15 @@ export async function POST(req: NextRequest) {
                 slug: finalSlug,
                 mainImage: data.mainImage,
                 gallery: data.gallery || [],
-                published: true, // Auto-publicar o dejar en false según preferencia
+                published: true,
                 authorId: providerId,
                 createdAt: data.publishedAt ? new Date(data.publishedAt) : new Date(),
-                type: "PRESS_NOTE", // Default type
-                // Tags automáticos: Incluimos la categoría como tag
-                tags: ["Automático", "Facebook", data.category].filter((t): t is string => !!t),
+                type: "PRESS_NOTE",
+
+                // SEO Fields
+                metaTitle: data.metaTitle || data.title,
+                metaDescription: data.metaDescription || data.summary,
+                tags: Array.from(finalTags),
             }
         })
 
