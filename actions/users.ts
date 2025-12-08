@@ -14,7 +14,7 @@ const createUserSchema = z.object({
     name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
     role: z.nativeEnum(Role),
-    abbreviation: z.string().optional(),
+    abbreviation: z.string().min(2, "La abreviación es requerida (min 2 letras)"),
 })
 
 const updateUserSchema = z.object({
@@ -23,7 +23,7 @@ const updateUserSchema = z.object({
     email: z.string().email("Email inválido"),
     role: z.nativeEnum(Role),
     password: z.string().optional(), // Optional on update
-    abbreviation: z.string().optional(),
+    abbreviation: z.string().min(2, "La abreviación es requerida").optional(),
 })
 
 // --- Actions ---
@@ -122,6 +122,7 @@ export async function createUser(formData: FormData) {
                 passwordHash,
                 role,
                 abbreviation,
+                slug: abbreviation.toLowerCase().trim().replace(/[^a-z0-9]/g, '-'), // Generate clean slug
                 isActive: true
             }
         })
@@ -179,7 +180,9 @@ export async function updateUser(formData: FormData) {
         name,
         email,
         role,
-        abbreviation
+        abbreviation,
+        // If abbreviation changes, update slug too
+        ...(abbreviation ? { slug: abbreviation.toLowerCase().trim().replace(/[^a-z0-9]/g, '-') } : {})
     }
 
     if (password) {

@@ -40,17 +40,20 @@ export async function updateProfile(formData: FormData) {
         youtube: youtube || null
     }
 
+    if (!abbreviation) throw new Error("La abreviación es obligatoria")
+    if (!slug) throw new Error("El URL personalizado (slug) es obligatorio")
+
     try {
         await prisma.user.update({
             where: { id: session.user.id },
             data: {
                 name: name || null,
-                abbreviation: abbreviation || null,
+                abbreviation: abbreviation,
                 description: description || null,
                 website: website || null,
                 logo: logo || null,
                 banner: banner || null,
-                slug: slug || null,
+                slug: slug,
                 region: region || null,
                 province: province || null,
                 district: district || null,

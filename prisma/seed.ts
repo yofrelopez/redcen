@@ -29,6 +29,8 @@ async function main() {
             description: "Entidad rectora de las políticas educativas nacionales, comprometida con garantizar una educación de calidad, inclusiva y equitativa para todos los peruanos.",
             website: "https://www.gob.pe/minedu",
             logo: "https://ui-avatars.com/api/?name=Ministerio+Educacion&size=256&background=1e3a8a&color=fff&bold=true&format=png",
+            abbreviation: "MINEDU",
+            slug: "minedu"
         },
     })
 

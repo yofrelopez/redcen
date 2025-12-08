@@ -33,6 +33,7 @@ async function main() {
                 passwordHash,
                 role: "ADMIN",
                 abbreviation: "ADM",
+                slug: "admin-user",
             },
         })
 

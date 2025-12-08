@@ -19,7 +19,7 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
-  abbreviation String?  // Short name for the institution
+  abbreviation String   @unique // Short name for the institution
   passwordHash String
   role         Role     @default(INSTITUTION)
   isActive     Boolean  @default(true) // Account status for soft delete
@@ -34,7 +34,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Institution Profile Fields
-  slug         String?   @unique // URL amigable (ej: /institucion/municipalidad-lima)
+  slug         String   @unique // URL amigable (ej: /institucion/municipalidad-lima)
   banner       String?   // Imagen de portada
   
   // Ubicación

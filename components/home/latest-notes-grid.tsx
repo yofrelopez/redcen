@@ -68,9 +68,11 @@ export function LatestNotesGrid({ notes }: LatestNotesGridProps) {
                             {/* Overlay degradado para texto */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-6 md:p-10">
                                 <div className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                                    <div className="flex items-center gap-3 mb-3 text-white/90">
-                                        <Badge variant="secondary" className="bg-primary hover:bg-primary text-white border-0">{featuredNote.author.name}</Badge>
-                                        <span className="text-sm border-l border-white/30 pl-3">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-white text-gray-900 shadow-sm backdrop-blur-sm">
+                                            {featuredNote.author.name}
+                                        </span>
+                                        <span className="text-sm text-white border-l border-white/40 pl-3 font-medium drop-shadow-md">
                                             {formatDistanceToNow(new Date(featuredNote.createdAt), { addSuffix: true, locale: es })}
                                         </span>
                                     </div>

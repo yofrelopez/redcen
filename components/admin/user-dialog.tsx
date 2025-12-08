@@ -107,12 +107,13 @@ export function UserDialog({ user, trigger, open, onOpenChange }: UserDialogProp
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="abbreviation">Abreviación (Opcional)</Label>
+                        <Label htmlFor="abbreviation">Abreviación / Siglas</Label>
                         <Input
                             id="abbreviation"
                             name="abbreviation"
                             defaultValue={user?.abbreviation || ""}
-                            placeholder="Ej: MINEDU"
+                            placeholder="Ej: MINEDU (Generará redcen.pe/minedu)"
+                            required
                         />
                     </div>
 
