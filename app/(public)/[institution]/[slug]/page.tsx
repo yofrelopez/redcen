@@ -89,54 +89,34 @@ export default async function NotePage({ params }: NotePageProps) {
     let slugParam;
 
     try {
-        console.log("DEBUG: NotePage started")
         const resolvedParams = await params
-        console.log("DEBUG: Resolved Params:", resolvedParams)
         const { institution, slug } = resolvedParams
         institutionParam = institution
         slugParam = slug
 
-        console.log(`DEBUG: Fetching note for ${institution}/${slug}`)
         note = await getNoteByInstitutionAndSlug(institution, slug)
-        console.log("DEBUG: Note fetch result:", note ? "Found" : "Null")
     } catch (error) {
-        console.error("CRITICAL DEBUG: Error fetching note:", error)
+        console.error("Error fetching note:", error)
         notFound()
     }
 
     if (!note) {
-        console.log("DEBUG: Note not found, returning 404")
+
         notFound()
     }
 
     // Get categories for JSON-LD
-    const allCategories = await getCategories().catch(err => {
-        console.error("DEBUG: Category fetch failed", err)
-        return []
-    })
+    const allCategories = await getCategories().catch(() => [])
     const noteCategories = allCategories.filter(cat => note.categoryIds.includes(cat.id))
     const articleSchema = generateArticleSchema(note, noteCategories)
 
     // Parallel data fetching for related content
-    console.log("DEBUG: Fetching related content")
-    let moreFromAuthor: any[] = [];
-    let latestNotes: any[] = [];
-
-    try {
-        const results = await Promise.all([
-            getMoreNotesFromAuthor(note.authorId, 3, note.id).catch(err => {
-                console.error("DEBUG: MoreFromAuthor failed", err); return []
-            }),
-            getRecentNotes(12, note.id).catch(err => {
-                console.error("DEBUG: RecentNotes failed", err); return []
-            })
-        ])
-        moreFromAuthor = results[0]
-        latestNotes = results[1]
-        console.log("DEBUG: Related content fetched")
-    } catch (e) {
-        console.error("DEBUG: Related content Promise.all failed", e)
-    }
+    const results = await Promise.all([
+        getMoreNotesFromAuthor(note.authorId, 3, note.id).catch(() => []),
+        getRecentNotes(12, note.id).catch(() => [])
+    ])
+    const moreFromAuthor = results[0]
+    const latestNotes = results[1]
 
     // Increment view count (fire and forget, don't block render)
     try {
