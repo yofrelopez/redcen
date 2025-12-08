@@ -94,8 +94,12 @@ export default async function NotePage({ params }: NotePageProps) {
         getRecentNotes(12, note.id)
     ])
 
-    // Increment view count
-    await incrementNoteView(note.id)
+    // Increment view count (fire and forget, don't block render)
+    try {
+        await incrementNoteView(note.id)
+    } catch (e) {
+        console.error("Failed to increment view count", e)
+    }
 
     // Calculate reading time (approx 200 words per minute)
     const words = note.content.replace(/<[^>]*>?/gm, '').split(/\s+/).length
