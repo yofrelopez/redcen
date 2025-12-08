@@ -1,31 +1,18 @@
-
 import { ApifyClient } from "apify-client"
 import axios from "axios"
 import * as dotenv from "dotenv"
 import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
-import Groq from "groq-sdk"
-import { v2 as cloudinary } from 'cloudinary'
+import { processWithGroq } from "../lib/scraper/groq"
+import { extractMedia } from "../lib/scraper/extractor"
 
 // Cargar variables de entorno
 dotenv.config()
 
 // =================CONFIGURACIÓN=================
 const APIFY_TOKEN = process.env.APIFY_TOKEN
-const INGEST_API_SECRET = process.env.INGEST_API_SECRET
 const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/api/webhooks/ingest"
-const GROQ_API_KEY = process.env.GROQ_API_KEY
-
-// Configuración Cloudinary
-cloudinary.config({
-    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-})
-
-// Configuración Filtros
-const MIN_CHAR_LENGTH = 500
 const POSTS_PER_SOURCE = 5
 
 // Configuración Adapter Prisma
@@ -40,13 +27,7 @@ if (!APIFY_TOKEN) {
     process.exit(1)
 }
 
-if (!GROQ_API_KEY) {
-    console.error("❌ ERROR: Falta GROQ_API_KEY en .env")
-    process.exit(1)
-}
-
 const client = new ApifyClient({ token: APIFY_TOKEN })
-const groq = new Groq({ apiKey: GROQ_API_KEY })
 
 async function getSources() {
     console.log("🔍 Buscando instituciones en la Base de Datos...")
@@ -71,99 +52,8 @@ async function getSources() {
         .filter((s): s is { slug: string; url: string } => s !== null && s.url.includes("facebook.com"))
 }
 
-// Función Helper para subir a Cloudinary
-async function uploadImageToCloudinary(url: string | null): Promise<string | null> {
-    if (!url) return null
-    try {
-        console.log(`☁️ Subiendo imagen a Cloudinary: ${url.substring(0, 50)}...`)
-        const result = await cloudinary.uploader.upload(url, {
-            folder: "noticias-ia",
-            fetch_format: "auto",
-            quality: "auto"
-        })
-        console.log(`✅ Imagen subida: ${result.secure_url}`)
-        return result.secure_url
-    } catch (error) {
-        console.error("❌ Error subiendo a Cloudinary:", error)
-        return null
-    }
-}
-
-async function processWithGroq(text: string, dateContext: string) {
-    if (text.length < MIN_CHAR_LENGTH) {
-        console.log(`📉 Post descartado por longitud (${text.length} < ${MIN_CHAR_LENGTH} chars)`)
-        return null
-    }
-
-    const prompt = `
-    Actúa como un **Redactor Senior** de "Redacción Central". Tu misión es transformar este reporte crudo en una **Crónica Periodística de Alto Impacto**.
-
-    CONTEXTO:
-    - Fuente Original: Facebook Institucional
-    - Fecha de Publicación: ${dateContext}
-    
-    TEXTO ORIGINAL:
-    "${text}"
-
-    MANUAL DE ESTILO (VOZ HUMANA):
-    1. **Cero Burocracia**: Elimina palabras como "realizó", "efectuó", "llevó a cabo". Usa verbos de acción: "inauguró", "lanzó", "confrontó".
-    2. **Foco en el Impacto**: No digas que "hubo una reunión". Di qué se decidió o cómo afecta al ciudadano.
-    3. **Voz Activa**: "El alcalde firmó el decreto" (Bien) vs "El decreto fue firmado por el alcalde" (Mal).
-    4. **Narrativa**: Cuenta una historia. Empieza con el dato más sorprendente o humano.
-    
-    INSTRUCCIONES DE ESTRUCTURA:
-    1. **NO INVENTES NADA**: Solo usa los datos del texto.
-    2. **TÍTULO**: Periodístico, corto y con verbo fuerte. (Ej: "Hospital Regional suma nueva ambulancia para reducir tiempos de espera").
-    3. **CUERPO HTML**:
-       - <strong>Lead</strong>: Un primer párrafo potente que enganche.
-       - <h3>Subtítulos</h3>: Usa 1 o 2 para romper el texto.
-       - <p>Párrafos cortos</p>: Máximo 3-4 líneas por párrafo.
-    4. **CIERRE**: Atribución clara ("Según informó la institución el ${dateContext}...").
-
-    INSTRUCCIONES SEO:
-    - **Meta Title**: < 60 chars, keyword al inicio.
-    - **Meta Description**: < 160 chars, provocativa.
-    - **Tags**: 5-8 keywords.
-
-    RESPONDE ESTRICTAMENTE EN FORMATO JSON:
-    {
-      "isRelevant": boolean,
-      "title": "Título periodístico",
-      "summary": "Resumen",
-      "content": "HTML enriquecido",
-      "category": "Política/Sociedad/Economía",
-      "metaTitle": "SEO Title",
-      "metaDescription": "SEO Desc",
-      "tags": ["tag1", "tag2"]
-    }
-    `
-
-    try {
-        const completion = await groq.chat.completions.create({
-            messages: [
-                { role: "system", content: "Eres un periodista digital galardonado por tu estilo directo y humano." },
-                { role: "user", content: prompt }
-            ],
-            // Usamos un modelo estable y gratuito/barato de Groq
-            model: "llama-3.3-70b-versatile",
-            temperature: 0.1, // Baja temperatura = Menos alucinación, más fidelidad
-            response_format: { type: "json_object" }
-        })
-
-        const jsonString = completion.choices[0]?.message?.content || "{}"
-        const data = JSON.parse(jsonString)
-
-        if (!data.isRelevant) return null
-        return data
-
-    } catch (error) {
-        console.error("❌ Error procesando con Groq AI:", error)
-        return null
-    }
-}
-
 async function runScraper() {
-    console.log(`🤖 Iniciando Scraper de Noticias con Groq AI (Max ${POSTS_PER_SOURCE} posts/fuente)...`)
+    console.log(`🤖 Iniciando Scraper de Noticias con Groq AI + Video Support...`)
 
     // 1. Obtener Fuentes
     const savedSources = await getSources()
@@ -176,7 +66,7 @@ async function runScraper() {
         console.log(`🔍 Procesando: ${source.slug}`)
 
         try {
-            // 2. Apify Scraper - CORRECT ACTOR for Posts
+            // 2. Apify Scraper
             const run = await client.actor("apify/facebook-posts-scraper").call({
                 startUrls: [{ url: source.url }],
                 resultsLimit: POSTS_PER_SOURCE,
@@ -194,64 +84,43 @@ async function runScraper() {
             // Procesar cada post encontrado
             for (const post of items) {
                 const rawPost: any = post
-
-                // Campos comunes de texto
-                // Campos comunes de texto
                 const rawText = rawPost.text || rawPost.postText || rawPost.caption || rawPost.description || ""
-
-                // --- ESTRATEGIA DE IMÁGENES (SUPER PRO) ---
-                // 1. Recolectar TODAS las posibles URLs (eliminando duplicados)
-                const candidateImages = new Set<string>()
-
-                if (rawPost.imageUrl) candidateImages.add(rawPost.imageUrl)
-                if (rawPost.fullImage) candidateImages.add(rawPost.fullImage)
-                if (rawPost.images && Array.isArray(rawPost.images)) {
-                    rawPost.images.forEach((img: string) => candidateImages.add(img))
-                }
-
-                // Buscar en adjuntos (álbumes)
-                if (rawPost.attachments && rawPost.attachments.length > 0) {
-                    for (const att of rawPost.attachments) {
-                        if (att.media?.image?.src) candidateImages.add(att.media.image.src)
-                        if (att.subattachments) {
-                            att.subattachments.forEach((sub: any) => {
-                                if (sub.media?.image?.src) candidateImages.add(sub.media.image.src)
-                            })
-                        }
-                    }
-                }
-
-                const uniqueCandidates = Array.from(candidateImages)
-                console.log(`📸 Encontradas ${uniqueCandidates.length} imágenes candidatas.`)
-
-                // 2. Subir todas a Cloudinary en paralelo (max 4 simultas para no saturar)
-                const uploadPromises = uniqueCandidates.map(url => uploadImageToCloudinary(url))
-                const results = await Promise.all(uploadPromises)
-
-                const uploadedImages: string[] = []
-                results.forEach(url => {
-                    if (url) uploadedImages.push(url)
-                })
-
-                // 3. Asignar Roles: La primera es Main, las demás Gallery
-                const mainImage = uploadedImages.length > 0 ? uploadedImages[0] : null
-                const gallery = uploadedImages.length > 1 ? uploadedImages.slice(1) : []
-
-                // 3. Procesamiento IA (Groq)
-                console.log(`\n🧠 Analizando post del ${rawPost.timestamp || rawPost.time || 'N/A'} (${rawText.length} chars)...`)
 
                 if (rawText.length === 0) {
                     console.log("⚠️  Texto vacío.")
                     continue
                 }
 
-                const postDate = rawPost.timestamp || rawPost.time || new Date().toISOString()
+                // --- MEDIA EXTRACTION (Modularized) ---
+                const { mainImage, gallery, isVideo } = await extractMedia(rawPost)
+
+                // --- PROCESAMIENTO AI ---
+
+                // Validación de Fecha (Evitar 1970)
+                let postDate = new Date().toISOString()
+                if (rawPost.timestamp && rawPost.timestamp > 946684800) { // Mayor a año 2000
+                    const ts = rawPost.timestamp > 1000000000000 ? rawPost.timestamp : rawPost.timestamp * 1000
+                    postDate = new Date(ts).toISOString()
+                } else if (rawPost.time) {
+                    postDate = new Date(rawPost.time).toISOString()
+                }
+
                 const formattedDate = new Date(postDate).toLocaleDateString("es-PE", { dateStyle: "full" })
+                console.log(`\n🧠 Analizando post del ${formattedDate} (${rawText.length} chars)...`)
+
                 const aiData = await processWithGroq(rawText, formattedDate)
 
                 if (!aiData) {
                     console.log("⏭️  Ignorado (No relevante o error AI).")
                     continue
+                }
+
+                // Lógica de Video: Tags y Link
+                if (isVideo) {
+                    aiData.tags.push("Video", "Multimedia")
+                    // Añadimos el link original al final para que Tiptap/Usuario lo vea
+                    const videoLink = rawPost.url || source.url
+                    aiData.content += `<h3>Multimedia</h3><p><a href="${videoLink}" target="_blank">Ver video original en Facebook</a></p>`
                 }
 
                 // 4. Ingesta
@@ -265,34 +134,23 @@ async function runScraper() {
                     mainImage: mainImage,
                     gallery: gallery,
                     category: aiData.category,
-                    // SEO Pack (Groq Generated)
                     metaTitle: aiData.metaTitle,
                     metaDescription: aiData.metaDescription,
                     tags: aiData.tags
                 }
 
-                console.log(`📦 Enviando Nota: "${payload.title}"`)
+                console.log(`📦 Enviando Nota: "${aiData.title}" ${isVideo ? '[VIDEO]' : ''}`)
 
                 try {
                     const response = await axios.post(INGEST_URL, payload, {
                         headers: {
-                            "Authorization": `Bearer ${INGEST_API_SECRET}`,
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${process.env.INGEST_API_SECRET}`
                         }
                     })
-
-                    if (response.status === 201 || response.status === 200) {
-                        console.log(`🚀 ÉXITO: Publicada (ID: ${response.data.id})`)
-                    } else {
-                        console.log(`⚠️  API Resp:`, response.status)
-                    }
-
-                } catch (apiError: any) {
-                    if (apiError.response?.status === 409) {
-                        console.log(`⏭️  OMITIDO: La nota ya existe.`)
-                    } else {
-                        console.error(`❌ Error Webhook:`, apiError.response?.data || apiError.message)
-                    }
+                    console.log(`🚀 ÉXITO: Publicada (ID: ${response.data.id})`)
+                } catch (error: any) {
+                    console.error("❌ Error Webhook:", error.response?.data || error.message)
                 }
             }
 
@@ -300,7 +158,6 @@ async function runScraper() {
             console.error(`❌ Error scraping ${source.slug}:`, error.message)
         }
 
-        // Breve pausa para no saturar
         await new Promise(r => setTimeout(r, 2000))
     }
     console.log("\n🏁 Finalizado.")
@@ -309,7 +166,6 @@ async function runScraper() {
 runScraper()
     .catch((e) => {
         console.error(e)
-        // console.error(e) // Omit full stack trace in production logs if undesired
         process.exit(1)
     })
     .finally(async () => {

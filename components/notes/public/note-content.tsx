@@ -81,7 +81,7 @@ export default function NoteContent({ content }: NoteContentProps) {
     return (
         <div className="prose prose-lg prose-gray max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-600 prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl [&_iframe]:block [&_iframe]:w-full [&_iframe]:max-w-[85%] md:[&_iframe]:max-w-[75%] [&_iframe]:mx-auto [&_iframe]:rounded-lg [&_iframe]:shadow-sm [&_iframe]:border [&_iframe]:border-gray-100">
             <div
-                className="whitespace-pre-wrap font-sans text-gray-800"
+                className="font-sans text-gray-800"
                 dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
         </div>
