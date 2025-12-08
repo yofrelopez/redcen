@@ -12,6 +12,13 @@ on:
 jobs:
   scrape-and-ingest:
     runs-on: ubuntu-latest
+    
+    env:
+      # Secretos disponibles para todos los pasos (incluyendo npm install)
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      INGEST_API_SECRET: ${{ secrets.INGEST_API_SECRET }}
+      INGEST_URL: ${{ secrets.INGEST_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       - name: Checkout Code
@@ -31,15 +38,3 @@ jobs:
 
       - name: Run Scraper Service
         run: npx tsx jobs/scraper-service.ts
-        env:
-          # Secretos configurados en GitHub Repo Settings
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          INGEST_API_SECRET: ${{ secrets.INGEST_API_SECRET }}
-          # URL de producción de la API (ajustar cuando se despliegue)
-          # Por defecto asumimos que el script usa localhost si no se provee,
-          # pero en GH Actions necesitamos la URL pública de la web desplegada.
-          INGEST_URL: ${{ secrets.INGEST_URL }}
-          # Base de datos necesaria para leer las instituciones
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # Si usamos Postgres Direct para scripts:
-          # DIRECT_URL: ${{ secrets.DIRECT_URL }}
