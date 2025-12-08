@@ -1,0 +1,45 @@
+
+name: Daily News Scraper
+
+on:
+  schedule:
+    # Ejecutar todos los días a las 6:00 AM hora Perú (UTC-5)
+    # 6:00 AM Perú = 11:00 AM UTC
+    - cron: '0 11 * * *'
+  # Permite ejecutar manualmente desde la pestaña Actions
+  workflow_dispatch:
+
+jobs:
+  scrape-and-ingest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Scraper Service
+        run: npx tsx jobs/scraper-service.ts
+        env:
+          # Secretos configurados en GitHub Repo Settings
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          INGEST_API_SECRET: ${{ secrets.INGEST_API_SECRET }}
+          # URL de producción de la API (ajustar cuando se despliegue)
+          # Por defecto asumimos que el script usa localhost si no se provee,
+          # pero en GH Actions necesitamos la URL pública de la web desplegada.
+          INGEST_URL: ${{ secrets.INGEST_URL }}
+          # Base de datos necesaria para leer las instituciones
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Si usamos Postgres Direct para scripts:
+          # DIRECT_URL: ${{ secrets.DIRECT_URL }}
