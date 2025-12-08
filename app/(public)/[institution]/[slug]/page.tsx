@@ -20,78 +20,96 @@ interface NotePageProps {
 }
 
 export async function generateMetadata({ params }: NotePageProps): Promise<Metadata> {
-    const { institution, slug } = await params
-    const note = await getNoteByInstitutionAndSlug(institution, slug)
+    try {
+        const { institution, slug } = await params
+        const note = await getNoteByInstitutionAndSlug(institution, slug)
 
-    if (!note) {
-        return {
-            title: "Nota no encontrada | " + SITE_NAME,
+        if (!note) {
+            return {
+                title: "Nota no encontrada | " + SITE_NAME,
+            }
         }
-    }
 
-    // Get categories for keywords
-    const allCategories = await getCategories()
-    const noteCategories = allCategories.filter(cat => note.categoryIds.includes(cat.id))
+        // Get categories for keywords
+        const allCategories = await getCategories().catch(() => [])
+        const noteCategories = allCategories.filter(cat => note.categoryIds.includes(cat.id))
 
-    const title = note.metaTitle || `${note.title} | ${note.author.name || SITE_NAME}`
-    const description = note.metaDescription || note.summary || truncateDescription(stripHtml(note.content))
-    const tags = note.tags || []
-    const keywords = [...tags, ...noteCategories.map(c => c.name)].join(", ")
+        const title = note.metaTitle || `${note.title} | ${note.author.name || SITE_NAME}`
+        const description = note.metaDescription || note.summary || truncateDescription(stripHtml(note.content))
+        const tags = note.tags || []
+        const keywords = [...tags, ...noteCategories.map(c => c.name)].join(", ")
 
-    const url = `${SITE_URL}/${institution}/${slug}`
+        const url = `${SITE_URL}/${institution}/${slug}`
 
-    return {
-        title,
-        description,
-        keywords,
-        openGraph: {
-            type: "article",
-            title: note.metaTitle || note.title,
+        return {
+            title,
             description,
-            url,
-            siteName: SITE_NAME,
-            publishedTime: note.createdAt.toISOString(),
-            modifiedTime: note.updatedAt.toISOString(),
-            authors: [note.author.name || note.author.email],
-            images: note.mainImage ? [
-                {
-                    url: note.mainImage,
-                    width: 1200,
-                    height: 630,
-                    alt: note.title,
-                }
-            ] : [],
-            locale: "es_PE",
-        },
-        twitter: {
-            card: "summary_large_image",
-            title: note.metaTitle || note.title,
-            description,
-            images: note.mainImage ? [note.mainImage] : [],
-        },
-        alternates: {
-            canonical: url,
-        },
+            keywords,
+            openGraph: {
+                type: "article",
+                title: note.metaTitle || note.title,
+                description,
+                url,
+                siteName: SITE_NAME,
+                publishedTime: note.createdAt.toISOString(),
+                modifiedTime: note.updatedAt.toISOString(),
+                authors: [note.author.name || note.author.email],
+                images: note.mainImage ? [
+                    {
+                        url: note.mainImage,
+                        width: 1200,
+                        height: 630,
+                        alt: note.title,
+                    }
+                ] : [],
+                locale: "es_PE",
+            },
+            twitter: {
+                card: "summary_large_image",
+                title: note.metaTitle || note.title,
+                description,
+                images: note.mainImage ? [note.mainImage] : [],
+            },
+            alternates: {
+                canonical: url,
+            },
+        }
+    } catch (error) {
+        console.error("Error generating metadata:", error)
+        return {
+            title: SITE_NAME,
+        }
     }
 }
 
 export default async function NotePage({ params }: NotePageProps) {
-    const { institution, slug } = await params
-    const note = await getNoteByInstitutionAndSlug(institution, slug)
+    let note;
+    let institutionParam;
+    let slugParam;
+
+    try {
+        const { institution, slug } = await params
+        institutionParam = institution
+        slugParam = slug
+        note = await getNoteByInstitutionAndSlug(institution, slug)
+    } catch (error) {
+        console.error("Error fetching note:", error)
+        notFound()
+    }
 
     if (!note) {
         notFound()
     }
 
     // Get categories for JSON-LD
-    const allCategories = await getCategories()
+    const allCategories = await getCategories().catch(() => [])
     const noteCategories = allCategories.filter(cat => note.categoryIds.includes(cat.id))
     const articleSchema = generateArticleSchema(note, noteCategories)
 
     // Parallel data fetching for related content
     const [moreFromAuthor, latestNotes] = await Promise.all([
-        getMoreNotesFromAuthor(note.authorId, 3, note.id),
-        getRecentNotes(12, note.id)
+        getMoreNotesFromAuthor(note.authorId, 3, note.id).catch(() => []),
+        getRecentNotes(12, note.id).catch(() => [])
     ])
 
     // Increment view count (fire and forget, don't block render)
@@ -101,8 +119,8 @@ export default async function NotePage({ params }: NotePageProps) {
         console.error("Failed to increment view count", e)
     }
 
-    // Calculate reading time (approx 200 words per minute)
-    const words = note.content.replace(/<[^>]*>?/gm, '').split(/\s+/).length
+    // Calculate reading time
+    const words = note.content ? note.content.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0
     const readingTime = Math.ceil(words / 200) + " min de lectura"
 
     return (
@@ -120,7 +138,7 @@ export default async function NotePage({ params }: NotePageProps) {
                         summary={note.summary}
                         author={note.author}
                         createdAt={note.createdAt}
-                        url={`${SITE_URL}/${institution}/${slug}`}
+                        url={`${SITE_URL}/${institutionParam ?? ""}/${slugParam ?? ""}`}
                         views={note.views + 1} // +1 to reflect current view
                         readingTime={readingTime}
                     />
