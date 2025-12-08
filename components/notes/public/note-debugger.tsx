@@ -1,41 +1,53 @@
 "use client"
 
-import { useState } from "react"
-import DOMPurify from "isomorphic-dompurify"
+import { useState, useEffect } from "react"
+// We import dynamically to avoid server-side jsdom/parse5 issues
+// import DOMPurify from "isomorphic-dompurify" 
 
 export function NoteDebugger({ content }: { content: string }) {
     const [isOpen, setIsOpen] = useState(false)
+    const [sanitizedDebug, setSanitizedDebug] = useState("")
 
-    // Re-run sanitization client-side to see what happens
-    // Configure DOMPurify to allow iframes from trusted sources
-    DOMPurify.addHook('afterSanitizeAttributes', function (node) {
-        if ('tagName' in node && node.tagName === 'IFRAME') {
-            const src = node.getAttribute('src') || ''
-            const trustedDomains = [
-                'www.youtube.com',
-                'youtu.be',
-                'www.youtube-nocookie.com',
-                'open.spotify.com',
-                'drive.google.com',
-                'docs.google.com',
-                'www.facebook.com',
-                'web.facebook.com',
-                'w.soundcloud.com'
-            ]
-            const isTrusted = trustedDomains.some(domain =>
-                src === `https://${domain}` || src.startsWith(`https://${domain}/`)
-            )
-            if (!isTrusted) {
-                console.warn("Blocked iframe src:", src)
-                node.remove()
-            }
-        }
-    });
+    useEffect(() => {
+        if (!isOpen) return;
 
-    const sanitized = DOMPurify.sanitize(content, {
-        ADD_TAGS: ['iframe'],
-        ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'width', 'height'],
-    })
+        // Load DOMPurify only when debugger is opened (client-side)
+        import("isomorphic-dompurify").then((mod) => {
+            const DOMPurify = mod.default;
+
+            // Configure DOMPurify hooks
+            DOMPurify.addHook('afterSanitizeAttributes', function (node: any) {
+                if ('tagName' in node && node.tagName === 'IFRAME') {
+                    const src = node.getAttribute('src') || ''
+                    const trustedDomains = [
+                        'www.youtube.com',
+                        'youtu.be',
+                        'www.youtube-nocookie.com',
+                        'open.spotify.com',
+                        'drive.google.com',
+                        'docs.google.com',
+                        'www.facebook.com',
+                        'web.facebook.com',
+                        'w.soundcloud.com'
+                    ]
+                    const isTrusted = trustedDomains.some(domain =>
+                        src === `https://${domain}` || src.startsWith(`https://${domain}/`)
+                    )
+                    if (!isTrusted) {
+                        console.warn("Blocked iframe src:", src)
+                        node.remove()
+                    }
+                }
+            });
+
+            // Sanitize
+            const result = DOMPurify.sanitize(content, {
+                ADD_TAGS: ['iframe'],
+                ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'width', 'height'],
+            });
+            setSanitizedDebug(result);
+        })
+    }, [content, isOpen])
 
     if (!isOpen) {
         return (
@@ -65,7 +77,7 @@ export function NoteDebugger({ content }: { content: string }) {
                     <div className="space-y-2">
                         <strong className="block text-xs uppercase text-green-600">Sanitized Output (Public View)</strong>
                         <pre className="bg-green-50 p-4 rounded text-xs font-mono whitespace-pre-wrap h-full overflow-auto border border-green-100 text-green-900">
-                            {sanitized}
+                            {sanitizedDebug || "Sanitizing..."}
                         </pre>
                     </div>
                 </div>

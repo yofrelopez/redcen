@@ -2,15 +2,16 @@ import { getNoteByInstitutionAndSlug, getMoreNotesFromAuthor, getRecentNotes, in
 import { getCategories } from "@/actions/categories"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
+
 import { SITE_URL, SITE_NAME, generateArticleSchema, truncateDescription, stripHtml } from "@/lib/seo"
 import { NoteHeader } from "@/components/notes/public/note-header"
 import { NoteImage } from "@/components/notes/public/note-image"
-import { NoteContent } from "@/components/notes/public/note-content"
 import { NoteFooter } from "@/components/notes/public/note-footer"
 import { NoteGallery } from "@/components/notes/public/note-gallery"
-
 import { MoreFromAuthor } from "@/components/notes/public/more-from-author"
 import { LatestNewsSection } from "@/components/notes/public/latest-news-section"
+
+import { DynamicNoteContent as NoteContent } from "@/components/notes/public/dynamic-note-content"
 
 interface NotePageProps {
     params: Promise<{
