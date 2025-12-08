@@ -19,6 +19,10 @@ jobs:
       INGEST_API_SECRET: ${{ secrets.INGEST_API_SECRET }}
       INGEST_URL: ${{ secrets.INGEST_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
 
     steps:
       - name: Checkout Code
