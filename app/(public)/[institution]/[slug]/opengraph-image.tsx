@@ -29,6 +29,18 @@ export default async function Image({ params }: { params: Promise<{ institution:
         console.error("LOG: Error fetching note:", e);
     }
 
+    // Helper to optimize Cloudinary URLs
+    const optimizeImage = (url: string | null) => {
+        if (!url) return null;
+        if (url.includes("cloudinary.com")) {
+            // Insert transformation before /v[0-9]/ part
+            // Example: .../image/upload/v123... -> .../image/upload/w_1200,q_auto,f_auto/v123...
+            // Or replace /upload/ with /upload/w_1200,q_auto,f_auto/
+            return url.replace("/upload/", "/upload/w_1200,q_auto,f_jpg/");
+        }
+        return url;
+    }
+
     console.log("LOG: Note result:", note ? `Found (${note.title})` : "Null");
 
     // 3. Render Fallback if no note
@@ -73,7 +85,7 @@ export default async function Image({ params }: { params: Promise<{ institution:
                 {note.mainImage && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                        src={note.mainImage}
+                        src={optimizeImage(note.mainImage) || ""}
                         alt="Background"
                         style={{
                             position: "absolute",
