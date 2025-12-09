@@ -58,6 +58,7 @@ model PressNote {
   mainImageAlt     String?
   mainImageCaption String?
   gallery          String[]
+  ogImage          String?  // URL de la imagen Open Graph pre-generada en Cloudinary
   content     String   @db.Text
   summary     String?
   published   Boolean  @default(false)

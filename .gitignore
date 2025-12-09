@@ -46,3 +46,6 @@ next-env.d.ts
 apify_storage/
 apify_debug_dump.json
 *.log
+scripts/local/
+error_log.txt
+debug_output.txt

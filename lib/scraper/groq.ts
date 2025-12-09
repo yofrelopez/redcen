@@ -31,30 +31,34 @@ export async function processWithGroq(text: string, dateContext: string): Promis
     }
 
     const prompt = `
-    Actúa como un **Redactor Senior** de "Redacción Central". Tu misión es transformar este reporte crudo en una **Crónica Periodística de Alto Impacto**.
+    Actúa como un **Redactor Senior** de "Redacción Central". Tu misión es convertir este texto de Facebook en una noticia bien estructurada.
 
     CONTEXTO:
-    - Fuente Original: Facebook Institucional
-    - Fecha de Publicación: ${dateContext}
+    - Fuente: Facebook Institucional
+    - Fecha: ${dateContext}
     
     TEXTO ORIGINAL:
     "${text}"
 
-    MANUAL DE ESTILO (VOZ HUMANA):
-       - **Negritas**: Usa "<strong>" solo para datos clave (cifras, nombres).
-    5. **CIERRE**: Atribución clara ("Según informó la institución...").
+    INSTRUCCIONES CLAVE:
+    1. **RELEVANCIA**: Si el texto tiene contenido informativo, ES RELEVANTE (isRelevant: true). No lo descartes salvo que sea spam obvio o errores de tipeo.
+    2. **TÍTULO**: Si no tiene título, CRÉALO. Debe ser informativo, periodístico y atractivo (max 80 chars).
+    3. **RESUMEN**: Crea una bajada corta (summary) que invite a leer.
+    4. **CONTENIDO**: Formatea el texto en HTML (<p>, <strong>, <h3>). 
+       - Si es un comunicado, mantén el tono formal.
+       - Si es noticia, usa narrativa periodística.
+       - Agrega subtítulos si ayuda a la lectura.
 
-    INSTRUCCIONES SEO:
-    - **Meta Title**: < 60 chars, keyword al inicio.
-    - **Meta Description**: < 160 chars, provocativa.
-    - **Tags**: 5-8 keywords.
+    SEO:
+    - Meta Title: Keyword principal + Título.
+    - Meta Description: Resumen atractivo para Google.
 
-    RESPONDE ESTRICTAMENTE EN FORMATO JSON:
+    RESPONDE ESTRICTAMENTE EN JSON:
     {
       "isRelevant": boolean,
-      "title": "Título periodístico",
-      "summary": "Resumen",
-      "content": "HTML enriquecido",
+      "title": "Título Generado",
+      "summary": "Bajada/Resumen",
+      "content": "HTML del cuerpo",
       "category": "Política/Sociedad/Economía",
       "metaTitle": "SEO Title",
       "metaDescription": "SEO Desc",
@@ -75,6 +79,7 @@ export async function processWithGroq(text: string, dateContext: string): Promis
         })
 
         const jsonString = completion.choices[0]?.message?.content || "{}"
+        console.log("🤖 Raw AI Response:", jsonString)
         const data = JSON.parse(jsonString) as AIData
 
         if (!data.isRelevant) return null

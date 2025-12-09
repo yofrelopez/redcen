@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
         const url = `${SITE_URL}/${institution}/${slug}`
 
         // Generate Optimized Cloudinary OG Image
-        const ogImageUrl = generateCloudinaryOgUrl(
+        const ogImageUrl = note.ogImage || generateCloudinaryOgUrl(
             note.mainImage,
             note.title,
             note.author.name || note.author.email

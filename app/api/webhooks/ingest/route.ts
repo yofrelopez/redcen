@@ -14,6 +14,7 @@ const ingestSchema = z.object({
     sourceUrl: z.string().url(),
     publishedAt: z.string().datetime().optional(), // Fecha original del post
     category: z.string().optional(),
+    ogImage: z.string().url().optional().nullable(), // New field
     // SEO Fields
     metaTitle: z.string().optional(),
     metaDescription: z.string().optional(),
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
                 slug: finalSlug,
                 mainImage: data.mainImage,
                 gallery: data.gallery || [],
+                ogImage: data.ogImage, // Save the pre-generated image
                 published: true,
                 authorId: providerId,
                 createdAt: data.publishedAt ? new Date(data.publishedAt) : new Date(),
@@ -115,6 +117,6 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error("[INGEST_API_ERROR]", error)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        return NextResponse.json({ error: "Internal Server Error", message: error.message, stack: error.stack }, { status: 500 })
     }
 }

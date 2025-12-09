@@ -1,3 +1,4 @@
+
 import { ApifyClient } from "apify-client"
 import axios from "axios"
 import * as dotenv from "dotenv"
@@ -6,6 +7,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
 import { processWithGroq } from "../lib/scraper/groq"
 import { extractMedia } from "../lib/scraper/extractor"
+import { generateStaticOgImage } from "../lib/services/og-generator"
 
 // Cargar variables de entorno
 dotenv.config()
@@ -13,7 +15,7 @@ dotenv.config()
 // =================CONFIGURACIÓN=================
 const APIFY_TOKEN = process.env.APIFY_TOKEN
 const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/api/webhooks/ingest"
-const POSTS_PER_SOURCE = 5
+const POSTS_PER_SOURCE = 10
 
 // Configuración Adapter Prisma
 const { Pool } = pg
@@ -36,7 +38,7 @@ async function getSources() {
             role: "INSTITUTION",
             isActive: true,
         },
-        select: { slug: true, socialLinks: true }
+        select: { slug: true, socialLinks: true, name: true, logo: true, abbreviation: true }
     })
 
     return institutions
@@ -46,10 +48,15 @@ async function getSources() {
 
             return {
                 slug: inst.slug,
-                url: links.facebook || links.Facebook || ""
+                url: links.facebook || links.Facebook || "",
+                name: inst.name || inst.slug, // Fallback name
+                logo: inst.logo,
+                abbreviation: inst.abbreviation
             }
         })
-        .filter((s): s is { slug: string; url: string } => s !== null && s.url.includes("facebook.com"))
+        .filter((s): s is { slug: string; url: string; name: string; logo: string | null; abbreviation: string | null } => s !== null && s.url.includes("facebook.com"))
+        // --- DEBUG: SOLO PROCESAR ANP ---
+        .filter(s => s.slug === "anp-peru")
 }
 
 async function runScraper() {
@@ -91,6 +98,12 @@ async function runScraper() {
                     continue
                 }
 
+                if (rawText.length < 500) {
+                    console.log(`📉 Post descartado por longitud (${rawText.length} < 500 chars)`)
+                    console.log(`🗑️ Contenido: "${rawText.substring(0, 100)}..."`) // Log first 100 chars
+                    continue
+                }
+
                 // --- MEDIA EXTRACTION (Modularized) ---
                 const { mainImage, gallery, isVideo } = await extractMedia(rawPost)
 
@@ -107,6 +120,7 @@ async function runScraper() {
 
                 const formattedDate = new Date(postDate).toLocaleDateString("es-PE", { dateStyle: "full" })
                 console.log(`\n🧠 Analizando post del ${formattedDate} (${rawText.length} chars)...`)
+                console.log(`📝 Preview Texto: "${rawText.substring(0, 100)}..."`)
 
                 const aiData = await processWithGroq(rawText, formattedDate)
 
@@ -139,10 +153,24 @@ async function runScraper() {
                     tags: aiData.tags
                 }
 
+                // 3.5. Generar OG Image (Estática)
+                const tempSlugForImage = `${source.slug}_${Date.now()}`
+
+                const ogImageUrl = await generateStaticOgImage({
+                    title: aiData.title,
+                    authorName: source.name,
+                    authorLogo: source.logo,
+                    abbreviation: source.abbreviation,
+                    mainImage: mainImage,
+                    slug: tempSlugForImage
+                })
+
+                const finalPayload = { ...payload, ogImage: ogImageUrl }
+
                 console.log(`📦 Enviando Nota: "${aiData.title}" ${isVideo ? '[VIDEO]' : ''}`)
 
                 try {
-                    const response = await axios.post(INGEST_URL, payload, {
+                    const response = await axios.post(INGEST_URL, finalPayload, {
                         headers: {
                             "Content-Type": "application/json",
                             "Authorization": `Bearer ${process.env.INGEST_API_SECRET}`
