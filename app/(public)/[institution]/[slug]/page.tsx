@@ -55,21 +55,12 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
                 publishedTime: note.createdAt.toISOString(),
                 modifiedTime: note.updatedAt.toISOString(),
                 authors: [note.author.name || note.author.email],
-                images: note.mainImage ? [
-                    {
-                        url: note.mainImage,
-                        width: 1200,
-                        height: 630,
-                        alt: note.title,
-                    }
-                ] : [],
                 locale: "es_PE",
             },
             twitter: {
                 card: "summary_large_image",
                 title: note.metaTitle || note.title,
                 description,
-                images: note.mainImage ? [note.mainImage] : [],
             },
             alternates: {
                 canonical: url,
