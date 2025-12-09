@@ -1,6 +1,7 @@
 import { getNoteByInstitutionAndSlug, getMoreNotesFromAuthor, getRecentNotes, incrementNoteView } from "@/actions/public"
 import { getCategories } from "@/actions/categories"
 import { notFound } from "next/navigation"
+import { generateCloudinaryOgUrl } from "@/lib/cloudinary-og"
 import type { Metadata } from "next"
 
 import { SITE_URL, SITE_NAME, generateArticleSchema, truncateDescription, stripHtml } from "@/lib/seo"
@@ -42,6 +43,13 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
 
         const url = `${SITE_URL}/${institution}/${slug}`
 
+        // Generate Optimized Cloudinary OG Image
+        const ogImageUrl = generateCloudinaryOgUrl(
+            note.mainImage,
+            note.title,
+            note.author.name || note.author.email
+        ) || note.mainImage || `${SITE_URL}/og.png` // Fallback chain
+
         return {
             title,
             description,
@@ -55,12 +63,21 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
                 publishedTime: note.createdAt.toISOString(),
                 modifiedTime: note.updatedAt.toISOString(),
                 authors: [note.author.name || note.author.email],
+                images: [
+                    {
+                        url: ogImageUrl,
+                        width: 1200, // Explicitly set dimensions to match transformation
+                        height: 630,
+                        alt: note.title,
+                    }
+                ],
                 locale: "es_PE",
             },
             twitter: {
                 card: "summary_large_image",
                 title: note.metaTitle || note.title,
                 description,
+                images: [ogImageUrl],
             },
             alternates: {
                 canonical: url,
