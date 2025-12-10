@@ -8,6 +8,8 @@ import { Plus } from "lucide-react"
 import { Suspense } from "react"
 import { Input } from "@/components/ui/input"
 
+import { Pagination } from "@/components/ui/pagination"
+
 export const metadata = {
     title: "Gestión de Usuarios - Admin",
 }
@@ -55,11 +57,14 @@ export default async function UsersPage({
                 <UserTable users={users} />
             </Suspense>
 
-            {/* Pagination (Simple) */}
-            <div className="flex items-center justify-between px-2">
+            <div className="flex items-center justify-between px-2 pt-4 border-t">
                 <div className="text-sm text-muted-foreground">
                     Total: {total} usuarios
                 </div>
+                <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                />
             </div>
         </div>
     )
