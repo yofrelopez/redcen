@@ -55,8 +55,8 @@ export function FeaturedInstitutions({ institutions }: FeaturedInstitutionsProps
                                     </div>
                                 )}
                             </div>
-                            <span className="text-xs font-medium text-gray-600 group-hover:text-primary transition-colors max-w-[120px] text-center leading-tight line-clamp-2 h-8 flex items-center justify-center">
-                                {(inst.name || "Institución").slice(0, 40)}
+                            <span className="text-xs font-medium text-gray-600 group-hover:text-primary transition-colors max-w-[140px] text-center leading-tight">
+                                {inst.name || "Institución"}
                             </span>
                         </Link>
                     ))}

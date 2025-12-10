@@ -12,7 +12,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <HeroSection />
+      {/* <HeroSection /> */}
       <LatestNotesGrid notes={notes} />
       <FeaturedInstitutions institutions={institutions} />
     </div>

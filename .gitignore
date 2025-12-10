@@ -49,3 +49,4 @@ apify_debug_dump.json
 scripts/local/
 error_log.txt
 debug_output.txt
+_BACKUP/

@@ -4,7 +4,7 @@ import * as dotenv from "dotenv"
 dotenv.config()
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
-const MIN_CHAR_LENGTH = 500
+const MIN_CHAR_LENGTH = 200 // Minimum length for relevance
 
 if (!GROQ_API_KEY) {
     console.error("❌ ERROR: Falta GROQ_API_KEY en .env")
@@ -31,7 +31,7 @@ export async function processWithGroq(text: string, dateContext: string): Promis
     }
 
     const prompt = `
-    Actúa como un **Redactor Senior** de "Redacción Central". Tu misión es convertir este texto de Facebook en una noticia bien estructurada.
+    ROL: Eres el EDITOR JEFE de "Redacción Central". Tu trabajo es transformar comunicados aburridos en NOTICIAS VIRALES.
 
     CONTEXTO:
     - Fuente: Facebook Institucional
@@ -40,26 +40,36 @@ export async function processWithGroq(text: string, dateContext: string): Promis
     TEXTO ORIGINAL:
     "${text}"
 
-    INSTRUCCIONES CLAVE:
-    1. **RELEVANCIA**: Si el texto tiene contenido informativo, ES RELEVANTE (isRelevant: true). No lo descartes salvo que sea spam obvio o errores de tipeo.
-    2. **TÍTULO**: Si no tiene título, CRÉALO. Debe ser informativo, periodístico y atractivo (max 80 chars).
-    3. **RESUMEN**: Crea una bajada corta (summary) que invite a leer.
-    4. **CONTENIDO**: Formatea el texto en HTML (<p>, <strong>, <h3>). 
-       - Si es un comunicado, mantén el tono formal.
-       - Si es noticia, usa narrativa periodística.
-       - Agrega subtítulos si ayuda a la lectura.
+    TUS MANDAMIENTOS:
+    4. **TÍTULOS DE IMPACTO**:
+       - PROHIBIDO títulos de 2 o 3 palabras (ej: "Huacho unido", "Inauguración obra").
+       - MÍNIMO 8 palabras. Estilo PERIODÍSTICO.
+       - Usa verbos de acción y ganchos.
+       - MALO: "Inauguración de obra"
+       - BUENO: "Más de 500 familias de Huacho tendrán agua potable tras 20 años de espera"
+
+    2. **NEGRITAS ESTRATÉGICAS**: En CADA párrafo, resalta en **negrita** (usa la etiqueta HTML <strong>) la frase o dato más importante. Esto es CRUCIAL para la lectura rápida.
+
+    3. **NARRATIVA VIBRANTE**:
+       - Rompe el tono institucional aburrido.
+       - Cuéntalo como una historia, no como un reporte.
+       - Usa párrafos cortos y directos.
+
+    4. **ESTRUCTURA**:
+       - Resumen (Bajada): 2 líneas potentes que resuman la noticia.
+       - Cuerpo: HTML limpio (<p>, <strong>, <h3> si es necesario).
 
     SEO:
-    - Meta Title: Keyword principal + Título.
-    - Meta Description: Resumen atractivo para Google.
+    - Meta Title: Keyword principal + Título atractivo.
+    - Meta Description: Resumen optimizado para click-through rate (CTR).
 
     RESPONDE ESTRICTAMENTE EN JSON:
     {
       "isRelevant": boolean,
-      "title": "Título Generado",
-      "summary": "Bajada/Resumen",
-      "content": "HTML del cuerpo",
-      "category": "Política/Sociedad/Economía",
+      "title": "Título de Impacto",
+      "summary": "Bajada periodística",
+      "content": "HTML con <strong>negritas</strong> estratégicas",
+      "category": "Política/Sociedad/Obras/Cultura",
       "metaTitle": "SEO Title",
       "metaDescription": "SEO Desc",
       "tags": ["tag1", "tag2"]
@@ -74,7 +84,7 @@ export async function processWithGroq(text: string, dateContext: string): Promis
             ],
             // Usamos un modelo estable y eficiente
             model: "llama-3.3-70b-versatile",
-            temperature: 0.1,
+            temperature: 0.7, // Increased for creativity (was 0.1)
             response_format: { type: "json_object" }
         })
 
@@ -92,7 +102,13 @@ export async function processWithGroq(text: string, dateContext: string): Promis
         return data
 
     } catch (error) {
-        console.error("❌ Error procesando con Groq AI:", error)
+        console.error("❌ Error procesando con Groq AI:")
+        if (error instanceof Error) {
+            console.error("Message:", error.message)
+            console.error("Stack:", error.stack)
+        } else {
+            console.error(JSON.stringify(error, null, 2))
+        }
         return null
     }
 }
