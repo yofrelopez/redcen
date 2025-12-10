@@ -147,3 +147,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Force Cloudinary Widget above Radix UI Dialogs */
+iframe[src*="cloudinary"],
+.cloudinary-overlay {
+  z-index: 100000 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure focus trap doesn't kill it */
+div[data-radix-focus-guard] {
+  z-index: 1 !important;
+}

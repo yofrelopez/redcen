@@ -15,6 +15,7 @@ const createUserSchema = z.object({
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
     role: z.nativeEnum(Role),
     abbreviation: z.string().min(2, "La abreviación es requerida (min 2 letras)"),
+    logo: z.string().optional(),
 })
 
 const updateUserSchema = z.object({
@@ -24,6 +25,7 @@ const updateUserSchema = z.object({
     role: z.nativeEnum(Role),
     password: z.string().optional(), // Optional on update
     abbreviation: z.string().min(2, "La abreviación es requerida").optional(),
+    logo: z.string().optional(),
 })
 
 // --- Actions ---
@@ -60,6 +62,7 @@ export async function getUsers(
                 role: true,
                 isActive: true, // Now exists
                 abbreviation: true,
+                logo: true, // Add logo
                 createdAt: true,
                 _count: {
                     select: { notes: true }
@@ -93,6 +96,7 @@ export async function createUser(formData: FormData) {
         password: formData.get("password"),
         role: formData.get("role"),
         abbreviation: formData.get("abbreviation") || undefined,
+        logo: formData.get("logo") || undefined,
     }
 
     const validation = createUserSchema.safeParse(rawData)
@@ -104,7 +108,7 @@ export async function createUser(formData: FormData) {
         }
     }
 
-    const { email, name, password, role, abbreviation } = validation.data
+    const { email, name, password, role, abbreviation, logo } = validation.data
 
     // Check availability
     const existing = await prisma.user.findUnique({ where: { email } })
@@ -123,6 +127,7 @@ export async function createUser(formData: FormData) {
                 role,
                 abbreviation,
                 slug: abbreviation.toLowerCase().trim().replace(/[^a-z0-9]/g, '-'), // Generate clean slug
+                logo,
                 isActive: true
             }
         })
@@ -148,6 +153,7 @@ export async function updateUser(formData: FormData) {
         role: formData.get("role"),
         password: formData.get("password") || undefined, // Send if exists
         abbreviation: formData.get("abbreviation") || undefined,
+        logo: formData.get("logo") || undefined,
     }
 
     // Determine correctness of optional password
@@ -162,7 +168,7 @@ export async function updateUser(formData: FormData) {
         }
     }
 
-    const { id, email, name, role, password, abbreviation } = validation.data
+    const { id, email, name, role, password, abbreviation, logo } = validation.data
 
     // Check unique email (exclude self)
     const existing = await prisma.user.findFirst({
@@ -181,6 +187,7 @@ export async function updateUser(formData: FormData) {
         email,
         role,
         abbreviation,
+        logo,
         // If abbreviation changes, update slug too
         ...(abbreviation ? { slug: abbreviation.toLowerCase().trim().replace(/[^a-z0-9]/g, '-') } : {})
     }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useFormStatus } from "react-dom"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createUser, updateUser } from "@/actions/users"
 import { toast } from "sonner"
 import { Plus, Loader2 } from "lucide-react"
+import ImageUpload from "@/components/ui/image-upload"
 
 enum Role {
     INSTITUTION = "INSTITUTION",
@@ -27,6 +28,14 @@ interface UserDialogProps {
 export function UserDialog({ user, trigger, open, onOpenChange }: UserDialogProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isPending, startTransition] = useTransition()
+    const [logo, setLogo] = useState(user?.logo || "")
+
+    // Reset/Sync logo when user prop changes or dialog opens
+    useEffect(() => {
+        if (open || isOpen) {
+            setLogo(user?.logo || "")
+        }
+    }, [user, open, isOpen])
 
     // Sync controlled/uncontrolled state
     const show = open !== undefined ? open : isOpen
@@ -38,9 +47,11 @@ export function UserDialog({ user, trigger, open, onOpenChange }: UserDialogProp
             if (user) {
                 // Edit
                 formData.append("id", user.id)
+                formData.set("logo", logo) // Append logo explicitly
                 result = await updateUser(formData)
             } else {
                 // Create
+                formData.set("logo", logo) // Append logo explicitly
                 result = await createUser(formData)
             }
 
@@ -65,10 +76,35 @@ export function UserDialog({ user, trigger, open, onOpenChange }: UserDialogProp
                     <DialogTitle>{user ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
                 </DialogHeader>
 
-                <form action={clientAction} className="grid gap-4 py-4">
+                <form action={clientAction} className="grid gap-4 py-4" autoComplete="off">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Nombre / Razón Social</Label>
                         <Input id="name" name="name" defaultValue={user?.name || ""} required minLength={3} />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-4">
+                        <Label className="text-muted-foreground text-sm">Logo Institucional</Label>
+                        <Input type="hidden" name="logo" value={logo} />
+                        <div className="relative group">
+                            <ImageUpload
+                                value={logo}
+                                onChange={(url) => setLogo(url)}
+                                label="Logo"
+                                className="w-32 h-32 rounded-full overflow-hidden border-2 border-border shadow-sm"
+                            />
+                            {logo && (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => setLogo("")}
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Eliminar logo"
+                                >
+                                    <Plus className="h-3 w-3 rotate-45" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid gap-2">
@@ -88,6 +124,7 @@ export function UserDialog({ user, trigger, open, onOpenChange }: UserDialogProp
                                 required={!user}
                                 minLength={6}
                                 placeholder={user ? "********" : "Mínimo 6 caracteres"}
+                                autoComplete="new-password"
                             />
                         </div>
                     )}
