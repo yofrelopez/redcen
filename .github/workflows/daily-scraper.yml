@@ -10,6 +10,11 @@ on:
     - cron: '0 11,17,23 * * *'
   # Permite ejecutar manualmente desde la pestaña Actions
   workflow_dispatch:
+    inputs:
+      hour:
+        description: 'Hora específica (ej: 6, 12, 18). Vacío = Hora Actual.'
+        required: false
+        type: string
 
 jobs:
   scrape-and-ingest:
@@ -43,4 +48,4 @@ jobs:
         run: npx prisma generate
 
       - name: Run Scraper Service
-        run: npx tsx jobs/scraper-service.ts
+        run: npx tsx jobs/scraper-service.ts --hour="${{ github.event.inputs.hour }}"

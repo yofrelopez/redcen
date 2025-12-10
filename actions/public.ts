@@ -14,7 +14,7 @@ export async function getLatestNotes() {
     return await prisma.pressNote.findMany({
         where: getVisibleNoteWhere(),
         orderBy: { createdAt: "desc" },
-        take: 12,
+        take: 17,
         include: {
             author: {
                 select: {

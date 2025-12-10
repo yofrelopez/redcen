@@ -39,18 +39,15 @@ export async function generateStaticOgImage({
         // V2.2: Distinct Top (White) and Bottom (Black) Gradients avoiding "dark mask" issue
         // We use "gradient_fade" with y-offset to localize them.
 
-        const gradientLayers = [
-            // Top Gradient: White, opaque enough to show logo clearly. y_-0.7 pushes it to very top.
-            {
-                effect: "gradient_fade,y_-0.7,b_white",
-                opacity: 90 // Increased opacity for clarity at top
-            },
-            // Bottom Gradient: Black, for title legibility. y_0.6 pushes it to bottom.
-            {
-                effect: "gradient_fade,y_0.6,b_black",
-                opacity: 90
-            }
-        ]
+        // --- Layer: Overlay (PNG) ---
+        // V3: Using static PNG overlay to match client-side design
+        const overlayLayer = {
+            overlay: "redcen_gradient_overlay_a9wt0m",
+            width: 1200,
+            height: 630,
+            crop: "fit", // Use fit to ensure it covers the area without distortion if aspect ratio matches
+            gravity: "center"
+        }
 
         // --- Layer: Brand Logo (Bottom Right) ---
         const brandLayer = {
@@ -96,7 +93,7 @@ export async function generateStaticOgImage({
         // 3. Build Base Transformation Array
         const baseTransformation = [
             { width: 1200, height: 630, crop: "fill", gravity: "center" }, // Base resize
-            ...gradientLayers,
+            overlayLayer,
             brandLayer,
             titleLayer,
             institutionNameLayer
