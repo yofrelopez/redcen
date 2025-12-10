@@ -8,6 +8,8 @@ import pg from "pg"
 import { processWithGroq } from "../lib/scraper/groq"
 import { extractMedia } from "../lib/scraper/extractor"
 import { generateStaticOgImage } from "../lib/services/og-generator"
+import { getBatchSources, getCurrentPeruHour } from "../lib/scraper/scheduler"
+import { parseArgs } from "node:util"
 
 // Cargar variables de entorno
 dotenv.config()
@@ -31,49 +33,49 @@ if (!APIFY_TOKEN) {
 
 const client = new ApifyClient({ token: APIFY_TOKEN })
 
-async function getSources() {
-    console.log("🔍 Buscando instituciones en la Base de Datos...")
-    const institutions = await prisma.user.findMany({
-        where: {
-            role: "INSTITUTION",
-            isActive: true,
-        },
-        select: { slug: true, socialLinks: true, name: true, logo: true, abbreviation: true }
-    })
+// --- LOGIC: SCHEDULING ---
+// Parse --hour argument. Usage: npx tsx jobs/scraper-service.ts --hour=6
+function getTargetHour(): number | null {
+    try {
+        const { values } = parseArgs({
+            options: {
+                hour: {
+                    type: "string",
+                },
+            },
+        });
 
-    return institutions
-        .map(inst => {
-            const links = inst.socialLinks as any
-            if (!links || (!links.facebook && !links.Facebook)) return null
+        if (values.hour && !isNaN(parseInt(values.hour))) {
+            return parseInt(values.hour, 10);
+        }
+    } catch (e) {
+        // Ignore parsing errors, fallback to auto
+    }
 
-            return {
-                slug: inst.slug,
-                url: links.facebook || links.Facebook || "",
-                name: inst.name || inst.slug, // Fallback name
-                logo: inst.logo,
-                abbreviation: inst.abbreviation
-            }
-        })
-        .filter((s): s is { slug: string; url: string; name: string; logo: string | null; abbreviation: string | null } => s !== null && s.url.includes("facebook.com"))
-        // --- DEBUG: SOLO PROCESAR ANP ---
-        .filter(s => s.slug === "anp-peru")
+    // Auto-detect Peru Time
+    return getCurrentPeruHour();
 }
 
 async function runScraper() {
-    console.log(`🤖 Iniciando Scraper de Noticias con Groq AI + Video Support...`)
+    // 1. Determine Batch
+    const targetHour = getTargetHour();
+    console.log(`🤖 Iniciando Scraper de Noticias con Groq AI + Video Support... (Batch Hora: ${targetHour})`)
 
-    // 1. Obtener Fuentes
-    const savedSources = await getSources()
-    console.log(`🎯 Objetivo: ${savedSources.length} instituciones encontradas.`)
+    // 2. Obtener Fuentes del Batch
+    const savedSources = await getBatchSources(prisma, targetHour)
+    console.log(`🎯 Objetivo: ${savedSources.length} instituciones encontradas para la hora ${targetHour !== null ? targetHour : 'ALL'}.`)
 
-    if (savedSources.length === 0) return
+    if (savedSources.length === 0) {
+        console.log("⚠️ No hay fuentes asignadas para este horario.")
+        return
+    }
 
     for (const source of savedSources) {
         console.log(`\n-----------------------------------`)
         console.log(`🔍 Procesando: ${source.slug}`)
 
         try {
-            // 2. Apify Scraper
+            // 3. Apify Scraper
             const run = await client.actor("apify/facebook-posts-scraper").call({
                 startUrls: [{ url: source.url }],
                 resultsLimit: POSTS_PER_SOURCE,
@@ -100,7 +102,6 @@ async function runScraper() {
 
                 if (rawText.length < 500) {
                     console.log(`📉 Post descartado por longitud (${rawText.length} < 500 chars)`)
-                    console.log(`🗑️ Contenido: "${rawText.substring(0, 100)}..."`) // Log first 100 chars
                     continue
                 }
 
@@ -120,7 +121,7 @@ async function runScraper() {
 
                 const formattedDate = new Date(postDate).toLocaleDateString("es-PE", { dateStyle: "full" })
                 console.log(`\n🧠 Analizando post del ${formattedDate} (${rawText.length} chars)...`)
-                console.log(`📝 Preview Texto: "${rawText.substring(0, 100)}..."`)
+                // console.log(`📝 Preview Texto: "${rawText.substring(0, 100)}..."`)
 
                 const aiData = await processWithGroq(rawText, formattedDate)
 

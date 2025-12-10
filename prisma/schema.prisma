@@ -38,6 +38,7 @@ model User {
   banner       String?   // Imagen de portada
   
   // Ubicación
+  scrapeHour   Int?      @default(6) // 6, 12, 18 - Hour to scrape (Peru Time)
   region       String?
   province     String?
   district     String?
