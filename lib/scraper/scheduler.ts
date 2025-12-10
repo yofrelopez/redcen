@@ -6,7 +6,7 @@ export interface ScraperSource {
     url: string
     name: string
     logo: string | null
-    abbreviation: string | null
+    abbreviation: string
     scrapeHour: number | null
 }
 
@@ -55,7 +55,7 @@ export async function getBatchSources(prisma: PrismaClient, targetHour: number |
             url: links.facebook || links.Facebook || "",
             name: inst.name || inst.slug,
             logo: inst.logo,
-            abbreviation: inst.abbreviation || "", // Fallback to empty string if somehow null
+            abbreviation: inst.abbreviation || inst.slug, // Fallback to slug if null (shouldn't be per schema)
             scrapeHour: inst.scrapeHour
         }
     })
