@@ -44,10 +44,11 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
         const url = `${SITE_URL}/${institution}/${slug}`
 
         // Generate Optimized Cloudinary OG Image
+        // Generate Optimized Cloudinary OG Image
         const ogImageUrl = note.ogImage || generateCloudinaryOgUrl(
             note.mainImage,
             note.title,
-            note.author.name || note.author.email
+            note.author.abbreviation || note.author.name || "Redacción Central"
         ) || note.mainImage || `${SITE_URL}/og.png` // Fallback chain
 
         return {
@@ -69,6 +70,7 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
                         width: 1200, // Explicitly set dimensions to match transformation
                         height: 630,
                         alt: note.title,
+                        type: "image/jpeg",
                     }
                 ],
                 locale: "es_PE",
