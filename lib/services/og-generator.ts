@@ -42,7 +42,7 @@ export async function generateStaticOgImage({
         // --- Layer: Overlay (PNG) ---
         // V3: Using static PNG overlay to match client-side design
         const overlayLayer = {
-            overlay: "redcen_gradient_overlay_a9wt0m",
+            overlay: "redcen_gradient_overlay-2_hhi7bw",
             width: 1200,
             height: 630,
             crop: "fit", // Use fit to ensure it covers the area without distortion if aspect ratio matches
@@ -96,7 +96,7 @@ export async function generateStaticOgImage({
             overlayLayer,
             brandLayer,
             titleLayer,
-            institutionNameLayer
+            // institutionNameLayer - REMOVED per user request
         ]
 
         // 4. Determine Logo Layer
