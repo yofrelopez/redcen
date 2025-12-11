@@ -21,7 +21,7 @@ export function FeaturedInstitutions({ institutions }: FeaturedInstitutionsProps
         <section className="border-b border-gray-100 bg-gray-50/50 py-10 overflow-hidden">
             <div className="container mx-auto px-4 mb-6">
                 <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest">
-                    Confían en Redacción Central
+                    Instituciones en Redacción Central
                 </p>
             </div>
 
