@@ -11,7 +11,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-xl border-gray-100 overflow-hidden">
                 <LoginHeader />
                 <LoginForm />
-                <LoginFooter />
+                {/* <LoginFooter /> */}
             </Card>
         </div>
     )
