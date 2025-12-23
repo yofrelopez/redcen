@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
                 slug: finalSlug,
                 mainImage: data.mainImage,
                 gallery: data.gallery || [],
+                sourceUrl: data.sourceUrl, // Save original URL
                 ogImage: data.ogImage, // Save the pre-generated image
                 published: true,
                 authorId: providerId,

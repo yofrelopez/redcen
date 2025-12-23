@@ -17,7 +17,7 @@ dotenv.config()
 // =================CONFIGURACIÓN=================
 const APIFY_TOKEN = process.env.APIFY_TOKEN
 const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/api/webhooks/ingest"
-const POSTS_PER_SOURCE = 10
+const POSTS_PER_SOURCE = 3
 
 // Configuración Adapter Prisma
 const { Pool } = pg
@@ -107,6 +107,19 @@ async function runScraper() {
 
                 // --- MEDIA EXTRACTION (Modularized) ---
                 const { mainImage, gallery, isVideo } = await extractMedia(rawPost)
+
+                // --- DUPLICATE CHECK (Local Optimization) ---
+                const existingNote = await prisma.pressNote.findFirst({
+                    where: {
+                        sourceUrl: rawPost.url
+                    },
+                    select: { id: true }
+                })
+
+                if (existingNote) {
+                    console.log("♻️  Duplicado detectado (URL ya existe). Saltando AI...")
+                    continue
+                }
 
                 // --- PROCESAMIENTO AI ---
 

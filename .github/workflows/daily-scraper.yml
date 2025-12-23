@@ -2,12 +2,12 @@
 name: Daily News Scraper
 
 on:
-  schedule:
+#   schedule:
     # Ejecutar 3 veces al día: 6am, 12pm, 6pm (Hora Perú UTC-5)
     # - 11:00 UTC = 06:00 PE
     # - 17:00 UTC = 12:00 PE
     # - 23:00 UTC = 18:00 PE
-    - cron: '0 11,17,23 * * *'
+    # - cron: '0 11,17,23 * * *'
   # Permite ejecutar manualmente desde la pestaña Actions
   workflow_dispatch:
     inputs:

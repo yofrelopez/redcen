@@ -62,6 +62,7 @@ model PressNote {
   ogImage          String?  // URL de la imagen Open Graph pre-generada en Cloudinary
   content     String   @db.Text
   summary     String?
+  sourceUrl   String?  @unique // URL original del post (para evitar duplicados)
   published   Boolean  @default(false)
   
 
