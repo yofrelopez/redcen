@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,88 +6,74 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  INSTITUTION  // Institución que publica notas
-  JOURNALIST   // Periodista acreditado
-  ADMIN        // Administrador de la plataforma
-}
-
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  abbreviation String   @unique // Short name for the institution
-  passwordHash String
-  role         Role     @default(INSTITUTION)
-  isActive     Boolean  @default(true) // Account status for soft delete
-  
-  description  String?  // About the institution
-  website      String?  // Institution website
-  logo         String?  // Logo URL (Cloudinary)
-  
-  notes        PressNote[]
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Institution Profile Fields
-  slug         String   @unique // URL amigable (ej: /institucion/municipalidad-lima)
-  banner       String?   // Imagen de portada
-  
-  // Ubicación
-  scrapeHour   Int?      @default(6) // 6, 12, 18 - Hour to scrape (Peru Time)
-  region       String?
-  province     String?
-  district     String?
-  address      String?
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String?
+  abbreviation  String      @unique
+  passwordHash  String
+  role          Role        @default(INSTITUTION)
+  isActive      Boolean     @default(true)
+  description   String?
+  website       String?
+  logo          String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  slug          String      @unique
+  banner        String?
+  region        String?
+  province      String?
+  district      String?
+  address       String?
   googleMapsUrl String?
-
-  // Contacto
-  phone        String?
-  publicEmail  String?
-  socialLinks  Json?     // { facebook: string, twitter: string, etc. }
+  phone         String?
+  publicEmail   String?
+  socialLinks   Json?
+  scrapeHour    Int?        @default(6)
+  notes         PressNote[]
 }
 
 model PressNote {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
+  id               String    @id @default(cuid())
+  title            String
+  slug             String    @unique
   mainImage        String?
   mainImageAlt     String?
   mainImageCaption String?
   gallery          String[]
-  ogImage          String?  // URL de la imagen Open Graph pre-generada en Cloudinary
-  content     String   @db.Text
-  summary     String?
-  sourceUrl   String?  @unique // URL original del post (para evitar duplicados)
-  published   Boolean  @default(false)
-  
+  content          String
+  summary          String?
+  published        Boolean   @default(false)
+  region           String?
+  province         String?
+  district         String?
+  metaTitle        String?
+  metaDescription  String?
+  tags             String[]  @default([])
+  views            Int       @default(0)
+  scheduledFor     DateTime?
+  categoryIds      String[]  @default([])
+  authorId         String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  type             NoteType  @default(PRESS_NOTE)
+  ogImage          String?
+  sourceUrl        String?   @unique
+  author           User      @relation(fields: [authorId], references: [id])
+}
 
-  // Ubicación
-  region      String?
-  province    String?
-  district    String?
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  // SEO
-  metaTitle       String?
-  metaDescription String?
-  tags            String[] @default([])
-
-  // Métricas
-  views       Int      @default(0)
-
-  // Programación
-  scheduledFor DateTime?
-  
-  categoryIds String[] @default([]) // IDs de categorías asignadas
-  
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  type        NoteType @default(PRESS_NOTE)
+enum Role {
+  INSTITUTION
+  JOURNALIST
+  ADMIN
 }
 
 enum NoteType {
@@ -104,12 +87,4 @@ enum NoteType {
   ALERT
   GALLERY
   REPORT
-}
-
-model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
