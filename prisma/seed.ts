@@ -15,7 +15,11 @@ async function main() {
     console.log("🌱 Seeding database...")
 
     // Hash password
-    const passwordHash = await bcrypt.hash("password123", 10)
+    const seedPassword = process.env.SEED_PASSWORD
+    if (!seedPassword) {
+        throw new Error("❌ ERROR: La variable de entorno 'SEED_PASSWORD' es requerida para el seeding.")
+    }
+    const passwordHash = await bcrypt.hash(seedPassword!, 10)
 
     // Create institution user
     const institution = await prisma.user.upsert({
@@ -179,7 +183,7 @@ Para el 2025, se tiene previsto intervenir 300 instituciones educativas adiciona
     console.log("\n🎉 Seeding completed successfully!")
     console.log("\nLogin credentials:")
     console.log("  Email: prensa@minedu.gob.pe")
-    console.log("  Password: password123")
+    console.log("  Password: (ver variable SEED_PASSWORD)")
 }
 
 main()

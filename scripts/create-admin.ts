@@ -15,12 +15,16 @@ const prisma = new PrismaClient({ adapter })
 
 async function main() {
     const email = process.env.ADMIN_EMAIL || "admin@redcen.com"
-    const password = process.env.ADMIN_PASSWORD || "Admin123!"
+    const password = process.env.ADMIN_PASSWORD
+
+    if (!password) {
+        throw new Error("❌ ERROR: La variable de entorno 'ADMIN_PASSWORD' es requerida.")
+    }
     const name = "Administrador Principal"
 
     console.log(`👤 Creando/Actualizando Admin: ${email}`)
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password!, 10)
 
     const user = await prisma.user.upsert({
         where: { email },
