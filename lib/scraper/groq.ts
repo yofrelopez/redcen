@@ -1,17 +1,25 @@
 import Groq from "groq-sdk"
-import * as dotenv from "dotenv"
+// dotenv configuration should be handled by the entry point
+// import * as dotenv from "dotenv"
+// dotenv.config()
 
-dotenv.config()
+// Lazy initialization to allow env loading by importer
+let groqInstance: Groq | null = null
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY
-const MIN_CHAR_LENGTH = 200 // Minimum length for relevance
+function getGroqClient() {
+    if (groqInstance) return groqInstance
 
-if (!GROQ_API_KEY) {
-    console.error("❌ ERROR: Falta GROQ_API_KEY en .env")
-    process.exit(1)
+    const GROQ_API_KEY = process.env.GROQ_API_KEY
+    if (!GROQ_API_KEY) {
+        console.error("❌ ERROR: Falta GROQ_API_KEY en .env")
+        throw new Error("GROQ_API_KEY missing")
+    }
+
+    groqInstance = new Groq({ apiKey: GROQ_API_KEY })
+    return groqInstance
 }
 
-const groq = new Groq({ apiKey: GROQ_API_KEY })
+const MIN_CHAR_LENGTH = 200 // Minimum length for relevance
 
 export interface AIData {
     isRelevant: boolean
@@ -77,7 +85,7 @@ export async function processWithGroq(text: string, dateContext: string): Promis
     `
 
     try {
-        const completion = await groq.chat.completions.create({
+        const completion = await getGroqClient().chat.completions.create({
             messages: [
                 { role: "system", content: "Eres un periodista digital galardonado por tu estilo directo y humano. Respondes solo JSON válido." },
                 { role: "user", content: prompt }

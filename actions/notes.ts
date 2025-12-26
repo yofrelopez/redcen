@@ -390,7 +390,7 @@ export async function getGlobalNotes({
                     },
                 },
             },
-            orderBy: { updatedAt: "desc" },
+            orderBy: { createdAt: "desc" },
             skip,
             take: limit,
         }),

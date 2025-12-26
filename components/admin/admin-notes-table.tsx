@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
+import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { MoreHorizontal, Pencil, Trash2, Eye, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -77,7 +77,7 @@ export function AdminNotesTable({ notes }: AdminNotesTableProps) {
                             <th className="px-6 py-4 font-medium">Nota</th>
                             <th className="px-6 py-4 font-medium">Institución</th>
                             <th className="px-6 py-4 font-medium">Estado</th>
-                            <th className="px-6 py-4 font-medium">Actualizado</th>
+                            <th className="px-6 py-4 font-medium">Publicado</th>
                             <th className="px-6 py-4 font-medium w-16"></th>
                         </tr>
                     </thead>
@@ -144,8 +144,7 @@ export function AdminNotesTable({ notes }: AdminNotesTableProps) {
                                     </Badge>
                                 </td>
                                 <td className="px-6 py-4 text-gray-500 text-xs" suppressHydrationWarning>
-                                    {formatDistanceToNow(new Date(note.updatedAt), {
-                                        addSuffix: true,
+                                    {format(new Date(note.createdAt), "dd/MM/yyyy", {
                                         locale: es,
                                     })}
                                 </td>
