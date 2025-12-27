@@ -60,6 +60,7 @@ model PressNote {
   ogImage          String?
   sourceUrl        String?   @unique
   facebookScheduledFor DateTime? // Used for Smart Queueing
+  originalPublishedAt  DateTime? // Fecha original de publicación en la fuente externa
   author           User      @relation(fields: [authorId], references: [id])
 }
 

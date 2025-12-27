@@ -17,13 +17,30 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
         }
     }
 
-    // Redirect to canonical URL for metadata
-    if (note.author.slug) {
-        return {}
-    }
+    const title = note.metaTitle || note.title || SITE_NAME
+    const description = note.metaDescription || note.summary || ""
+    const images = []
+
+    if (note.ogImage) images.push(note.ogImage)
+    if (note.mainImage) images.push(note.mainImage)
 
     return {
-        title: "Redirigiendo...",
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            images: images,
+            type: 'article',
+            publishedTime: note.createdAt.toISOString(),
+            authors: [note.author.name || ""],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: images,
+        }
     }
 }
 

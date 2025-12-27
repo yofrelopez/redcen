@@ -61,22 +61,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Institution not found" }, { status: 404 })
         }
 
-        // 4. Verificar Duplicados
-        const rawSlug = data.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)+/g, "")
-
-        const existingNote = await prisma.pressNote.findFirst({
+        // 4. Verificar Duplicados (Por URL de origen estricta)
+        const existingNote = await prisma.pressNote.findUnique({
             where: {
-                slug: { startsWith: rawSlug },
-                authorId: providerId
+                sourceUrl: data.sourceUrl,
             }
         })
 
         if (existingNote) {
-            return NextResponse.json({ message: "Note already exists", id: existingNote.id }, { status: 200 })
+            return NextResponse.json({ message: "Note already exists (by sourceUrl)", id: existingNote.id }, { status: 200 })
         }
+
+        // Generar Slug (Aún necesario para la creación)
+        const rawSlug = data.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)+/g, "")
 
         const finalSlug = `${rawSlug}-${Date.now()}`
 
@@ -100,7 +100,8 @@ export async function POST(req: NextRequest) {
                 ogImage: data.ogImage, // Save the pre-generated image
                 published: true,
                 authorId: providerId,
-                createdAt: data.publishedAt ? new Date(data.publishedAt) : new Date(),
+                createdAt: new Date(), // Fecha real de ingesta (Ahora)
+                originalPublishedAt: data.publishedAt ? new Date(data.publishedAt) : null, // Fecha original de la fuente
                 type: "PRESS_NOTE",
 
                 // SEO Fields

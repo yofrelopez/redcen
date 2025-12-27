@@ -43,38 +43,59 @@ export const FacebookService = {
         let isScheduled = false
 
         if (lastScheduledNote?.facebookScheduledFor) {
-            // Scenario A: Queue exists. Schedule 10 mins after the last one.
-            // We add 11 minutes just to be safe with Facebook's 10m minimum rule overlap
+            // Scenario A: Queue exists. Schedule 11 mins after the last one.
             const nextSlot = new Date(lastScheduledNote.facebookScheduledFor)
             nextSlot.setMinutes(nextSlot.getMinutes() + 11)
 
             scheduledTime = nextSlot
             isScheduled = true
         } else {
-            // Scenario B: Queue empty. Publish immediately.
-            // We record "now" as the scheduled time so the NEXT note knows.
-            scheduledTime = new Date()
-            isScheduled = false
+            // Scenario B: Queue empty.
+            // [SECURITY BUFFER] We schedule 11 mins into the future to allow Cloudinary OG generation time.
+            // Facebook minimum schedule time is 10 mins.
+            const nextSlot = new Date()
+            nextSlot.setMinutes(nextSlot.getMinutes() + 11)
+
+            scheduledTime = nextSlot
+            isScheduled = true
         }
 
-        console.log(`🚀 Facebook Queue: ${isScheduled ? 'SCHEDULING' : 'IMMEDIATE'} for ${scheduledTime.toISOString()}`)
+        console.log(`🚀 Facebook Queue: SCHEDULING for ${scheduledTime.toISOString()} (Buffer active)`)
 
-        // 2. Call Service
-        const res = await this.publishPost(message, publicUrl, {
-            scheduled_publish_time: isScheduled ? Math.floor(scheduledTime.getTime() / 1000) : undefined
-        })
-
-        if (res.error) {
-            console.error("⚠️ Facebook Publish Warning:", res.error)
-            return { success: false, error: res.error }
-        } else {
-            // 3. Update DB with the official scheduled time to block the slot
+        // 2. [CRITICAL FIX] Reserve Slot in DB FIRST to prevent Race Conditions
+        try {
             await prisma.pressNote.update({
                 where: { id: note.id },
                 data: {
                     facebookScheduledFor: scheduledTime
                 }
             })
+        } catch (dbError) {
+            console.error("❌ Failed to reserve Facebook slot:", dbError)
+            return { success: false, error: "Database reservation failed" }
+        }
+
+        // 3. Call Service
+        const res = await this.publishPost(message, publicUrl, {
+            scheduled_publish_time: isScheduled ? Math.floor(scheduledTime.getTime() / 1000) : undefined
+        })
+
+        if (res.error) {
+            console.error("⚠️ Facebook Publish Warning:", res.error)
+
+            // 4. [ROLLBACK] If publish fails, free the slot so it doesn't block queue
+            try {
+                await prisma.pressNote.update({
+                    where: { id: note.id },
+                    data: { facebookScheduledFor: null }
+                })
+            } catch (rollbackError) {
+                console.error("❌ Failed to rollback Facebook slot:", rollbackError)
+            }
+
+            return { success: false, error: res.error }
+        } else {
+            // Success! The slot is already reserved, nothing more to do.
             return { success: true, scheduledTime }
         }
     },
