@@ -59,6 +59,7 @@ model PressNote {
   type             NoteType  @default(PRESS_NOTE)
   ogImage          String?
   sourceUrl        String?   @unique
+  facebookScheduledFor DateTime? // Used for Smart Queueing
   author           User      @relation(fields: [authorId], references: [id])
 }
 

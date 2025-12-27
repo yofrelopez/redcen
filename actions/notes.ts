@@ -54,7 +54,7 @@ export async function createNote(formData: FormData) {
 
         console.log("Creating note with data:", { title, slug, authorId })
 
-        await prisma.pressNote.create({
+        const newNote = await prisma.pressNote.create({
             data: {
                 title,
                 content,
@@ -77,6 +77,22 @@ export async function createNote(formData: FormData) {
                 published: isPublished,
             },
         })
+
+        // Facebook Auto-Share Integration
+        if (isPublished && !scheduledFor) {
+            try {
+                const { FacebookService } = await import("@/lib/services/facebook")
+                // Use the shared Smart Queue logic
+                await FacebookService.smartQueuePublish({
+                    id: newNote.id,
+                    title: newNote.title,
+                    summary: newNote.summary,
+                    slug: newNote.slug
+                })
+            } catch (err) {
+                console.error("❌ Error loading Facebook Service:", err)
+            }
+        }
 
         return { success: true }
     } catch (error: any) {

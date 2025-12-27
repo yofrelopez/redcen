@@ -128,5 +128,16 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         province: "Huaura",
         district: "Chancay",
         scrapeHour: 18
+    },
+    {
+        name: "Eps Barranca",
+        abbreviation: "EPSB",
+        slug: "epsb",
+        email: "prensa@epsbarranca.gob.pe",
+        facebookUrl: "https://www.facebook.com/epsbarranca",
+        region: "Lima",
+        province: "Barranca",
+        district: "Barranca",
+        scrapeHour: 18
     }
 ]
