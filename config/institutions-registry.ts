@@ -35,7 +35,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Barranca",
         district: "Barranca",
-        // scrapeHour: 6
+        scrapeHour: 6
     },
     {
         name: "Gobierno Regional de Lima",
@@ -46,7 +46,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Lima",
         district: "Lima",
-        // scrapeHour: 6
+        scrapeHour: 6
     },
     {
         name: "Municipalidad Provincial de Huaura",
@@ -57,7 +57,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Huaura",
         district: "Huacho",
-        // scrapeHour: 6
+        scrapeHour: 6
     },
 
     // --- TURNO 12:00 PM (Mediodía) ---
@@ -70,7 +70,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Barranca",
         district: "Paramonga",
-        // scrapeHour: 12
+        scrapeHour: 12
     },
     {
         name: "Municipalidad Distrital de Pativilca",
@@ -81,7 +81,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Barranca",
         district: "Pativilca",
-        // scrapeHour: 12
+        scrapeHour: 12
     },
     {
         name: "Corte Superior de Justicia de Huaura",
@@ -92,7 +92,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Huaura",
         district: "Huacho",
-        // scrapeHour: 12
+        scrapeHour: 12
     },
 
     // --- TURNO 6:00 PM (Tarde) ---

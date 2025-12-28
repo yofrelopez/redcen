@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         // --- FACEBOOK AUTO-SHARE (Robot Integration) ---
         // Critical: Only publish to FB if the note is published immediately
         // Note: 'published' is hardcoded to true in creation, but we check just in case logic changes
-        /*
+
         if (newNote.published && !newNote.scheduledFor) {
             try {
                 const { FacebookService } = await import("@/lib/services/facebook")
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
                 console.error("❌ [FB-Queue] Error en webhoook:", err)
             }
         }
-        */
+
         // ----------------------------------------------
 
         // 6. Revalidar Cache
