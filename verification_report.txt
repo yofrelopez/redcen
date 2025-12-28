@@ -1,0 +1,11 @@
+🧪 Testing Facebook URL Logic (File Report)...
+
+📄 Note Found: "Magistrados y personal de la Corte Superior de Justicia de Huaura brindan alegría navideña a niños vulnerables en Tiroler"
+   ID: cmjokm5w0000j04l20prpumg7
+   Slug: magistrados-y-personal-de-la-corte-superior-de-justicia-de-huaura-brindan-alegr-a-navide-a-a-ni-os-vulnerables-en-tiroler-1766856289102
+   Author Slug: csjh
+
+🔴 OLD URL (Redirects): https://redcen.com/notas/magistrados-y-personal-de-la-corte-superior-de-justicia-de-huaura-brindan-alegr-a-navide-a-a-ni-os-vulnerables-en-tiroler-1766856289102
+🟢 NEW URL (Direct):     https://redcen.com/csjh/magistrados-y-personal-de-la-corte-superior-de-justicia-de-huaura-brindan-alegr-a-navide-a-a-ni-os-vulnerables-en-tiroler-1766856289102
+
+✅ Verification: The NEW URL skips the redirect.

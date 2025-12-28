@@ -16,7 +16,19 @@ export const FacebookService = {
      * Compatible con Server Actions y Webhooks.
      */
     async smartQueuePublish(note: { id: string, title: string, summary: string | null, slug: string }) {
-        const publicUrl = `${SITE_URL}/notas/${note.slug}`
+        // 1. Fetch full note to get Author Slug (Critical for direct URL)
+        const fullNote = await prisma.pressNote.findUnique({
+            where: { id: note.id },
+            include: { author: { select: { slug: true } } }
+        })
+
+        if (!fullNote || !fullNote.author.slug) {
+            console.error("❌ FacebookService: Could not find author slug for note", note.id)
+            return { success: false, error: "Author slug missing" }
+        }
+
+        // Construct DIRECT URL (Bypass /notas/slug redirect)
+        const publicUrl = `${SITE_URL}/${fullNote.author.slug}/${note.slug}`
 
         // User Requirement: Use "bajada" (summary) as the post description.
         let message = note.title
