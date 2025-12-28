@@ -10,7 +10,61 @@ interface FacebookPostData {
     scheduled_publish_time?: number // Unix timestamp
 }
 
+// --- CONFIGURATION ---
+const SECONDARY_PAGE_ID = "133871006648054" // Barranca Noticias
+const PRIORITY_SOURCES = ["mpb", "goreli"] // 100% Probability
+const BASE_PROBABILITY = 0.2 // 20% for others
+
 export const FacebookService = {
+    /**
+     * Lógica de "Eco Orgánico" para la segunda fanpage.
+     * Decide si compartir y cuándo (retraso aleatorio).
+     */
+    async handleSmartCrossposting(note: { id: string, title: string, summary: string | null, slug: string, authorSlug?: string }) {
+        // 1. Decisión de Probabilidad
+        let shouldPost = false
+        const isPriority = note.authorSlug && PRIORITY_SOURCES.includes(note.authorSlug)
+
+        if (isPriority) {
+            shouldPost = true // Vip sources always go through
+            console.log(`🌟 [Crossposting] PRIORIDAD ALTA para ${note.authorSlug}. Se publicará.`)
+        } else {
+            // Roll the dice (0.0 to 1.0)
+            const dice = Math.random()
+            shouldPost = dice <= BASE_PROBABILITY
+            console.log(`🎲 [Crossposting] Sorteo: ${dice.toFixed(2)} <= ${BASE_PROBABILITY} ? ${shouldPost}`)
+        }
+
+        if (!shouldPost) return // Skip
+
+        // 2. Cálculo de Retraso Orgánico (45 min a 120 min)
+        // 45m = 2700s, 120m = 7200s
+        const minDelaySeconds = 45 * 60
+        const maxDelaySeconds = 120 * 60
+        const randomSeconds = Math.floor(Math.random() * (maxDelaySeconds - minDelaySeconds + 1)) + minDelaySeconds
+
+        const now = Math.floor(Date.now() / 1000)
+        const scheduledTime = now + randomSeconds
+
+        console.log(`⏳ [Crossposting] Programado para Barranca Noticias en ${(randomSeconds / 60).toFixed(0)} mins.`)
+
+        // 3. Ejecutar Envío
+        // Construct Link
+        const authorSlug = note.authorSlug || "redaccion" // Fallback safety
+        const publicUrl = `${SITE_URL}/${authorSlug}/${note.slug}`
+
+        let message = note.title
+        if (note.summary) {
+            message = stripHtml(note.summary)
+        }
+
+        // Fuego:
+        await this.publishPost(message, publicUrl, {
+            scheduled_publish_time: scheduledTime,
+            pageIdOverride: SECONDARY_PAGE_ID
+        })
+    },
+
     /**
      * Maneja la lógica de Cola Inteligente para publicar o programar un post.
      * Compatible con Server Actions y Webhooks.
@@ -117,8 +171,8 @@ export const FacebookService = {
      * @param message Texto del post (obligatorio)
      * @param link Enlace opcional (ej: url de la nota)
      */
-    async publishPost(message: string, link?: string, options?: { scheduled_publish_time?: number }) {
-        const pageId = process.env.FB_PAGE_ID
+    async publishPost(message: string, link?: string, options?: { scheduled_publish_time?: number, pageIdOverride?: string }) {
+        const pageId = options?.pageIdOverride || process.env.FB_PAGE_ID
         const accessToken = process.env.FB_PAGE_ACCESS_TOKEN
 
         if (!pageId || !accessToken) {

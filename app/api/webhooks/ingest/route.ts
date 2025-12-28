@@ -108,7 +108,8 @@ export async function POST(req: NextRequest) {
                 metaTitle: data.metaTitle || data.title,
                 metaDescription: data.metaDescription || data.summary,
                 tags: Array.from(finalTags),
-            }
+            },
+            include: { author: true }
         })
 
         // --- FACEBOOK AUTO-SHARE (Robot Integration) ---
@@ -120,15 +121,39 @@ export async function POST(req: NextRequest) {
                 const { FacebookService } = await import("@/lib/services/facebook")
 
                 // Fire and await (to ensure queue order)
-                await FacebookService.smartQueuePublish({
+                const fbResult = await FacebookService.smartQueuePublish({
                     id: newNote.id,
                     title: newNote.title,
                     summary: newNote.summary,
                     slug: newNote.slug
                 })
-                console.log(`✅ [FB-Queue] Nota procesada para Facebook: ${newNote.slug}`)
+
+                if (fbResult.success) {
+                    console.log(`✅ [FB-Queue] Nota procesada para Facebook: ${newNote.slug}`)
+                    // Assuming 'summary.facebookPublished++' was a placeholder for a metric,
+                    // it's removed as 'summary' is not defined in this scope.
+
+                    // --- ORGANIC ECHO STRATEGY (Secondary Fanpage) ---
+                    // "Fire and forget" - we don't await this to keep webhook fast,
+                    // or await it if we want to log it in the console.
+                    // Given it's just a calculation + API call, awaiting is safe and better for logs.
+                    try {
+                        await FacebookService.handleSmartCrossposting({
+                            id: newNote.id,
+                            title: newNote.title,
+                            summary: newNote.summary,
+                            slug: newNote.slug,
+                            authorSlug: newNote.author?.slug // WE MUST PASS THIS for the priority filter
+                        })
+                        console.log(`✅ [FB-Crosspost] Nota procesada para Crossposting: ${newNote.slug}`)
+                    } catch (echoError) {
+                        console.error("⚠️ Error in Organic Echo:", echoError)
+                    }
+                } else {
+                    console.error("❌ Failed to queue for Facebook:", fbResult.error)
+                }
             } catch (err) {
-                console.error("❌ [FB-Queue] Error en webhoook:", err)
+                console.error("❌ [FB-Queue] Error en webhook:", err)
             }
         }
 
