@@ -131,20 +131,32 @@ async function runScraper() {
                 continue
             }
 
-            // --- PREVENCIÓN DE DUPLICADOS (CAPA 1: URL) ---
-            // Optimizacion Critica: Spec 4. Capa 1
-            if (!postUrl) {
+            // --- PREVENCIÓN DE DUPLICADOS (CAPA 1: URL OPTIMIZADA) ---
+            // Limpiar URL de parámetros basura (?ref, &mibextid, etc)
+            let cleanPostUrl = postUrl
+            try {
+                if (postUrl) {
+                    const urlObj = new URL(postUrl)
+                    // Mantener solo el path, eliminar search params (query string)
+                    cleanPostUrl = `${urlObj.origin}${urlObj.pathname}`
+                }
+            } catch (e) {
+                // Si falla el parseo, usamos la original
+                cleanPostUrl = postUrl
+            }
+
+            if (!cleanPostUrl) {
                 console.warn("⚠️ Post sin URL, saltando.")
                 continue
             }
 
             const existingNote = await prisma.pressNote.findFirst({
-                where: { sourceUrl: postUrl },
+                where: { sourceUrl: cleanPostUrl },
                 select: { id: true }
             })
 
             if (existingNote) {
-                console.log(`♻️ [Skip] Duplicado detectado (URL ya existe): ${matchedSource.slug}`)
+                console.log(`♻️ [Skip] Duplicado detectado (URL ya existe): ${matchedSource.slug} -> ${cleanPostUrl}`)
                 continue
             }
             // ------------------------------------------------
@@ -159,8 +171,13 @@ async function runScraper() {
                 continue
             }
 
-            // --- MEDIA EXTRACTION ---
+            // --- MEDIA EXTRACTION & STRICT VALIDATION (PUNTO 1) ---
             const { mainImage, gallery, isVideo } = await extractMedia(rawPost)
+
+            if (!mainImage) {
+                console.warn(`⚠️ [SKIP Strict] La nota no tiene imagen válida. Se descarta para mantener calidad. (${cleanPostUrl})`)
+                continue
+            }
 
             // --- PROCESAMIENTO AI (GROQ) ---
             // Validación de Fecha
@@ -172,7 +189,17 @@ async function runScraper() {
                 postDate = new Date(rawPost.time).toISOString()
             }
 
-            const formattedDate = new Date(postDate).toLocaleDateString("es-PE", { dateStyle: "full" })
+            // --- STRICT DATE FILTER (PUNTO 2) ---
+            // Ignoramos lo que diga Apify, verificamos manualmente si tiene < 24h
+            const postDateObj = new Date(postDate)
+            const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+            if (postDateObj < cutoffDate) {
+                console.warn(`📉 [SKIP Old] Nota antigua detectada: ${postDate} (Cutoff: ${cutoffDate.toISOString()})`)
+                continue
+            }
+
+            const formattedDate = postDateObj.toLocaleDateString("es-PE", { dateStyle: "full" })
             console.log(`\n🧠 Analizando post de ${matchedSource.slug} (${formattedDate})...`)
 
             const aiData = await processWithGroq(rawText, formattedDate)
@@ -185,7 +212,7 @@ async function runScraper() {
             // Lógica de Video
             if (isVideo) {
                 aiData.tags.push("Video", "Multimedia")
-                const videoLink = postUrl || matchedSource.url
+                const videoLink = cleanPostUrl || matchedSource.url
                 aiData.content += `<h3>Multimedia</h3><p><a href="${videoLink}" target="_blank">Ver video original en Facebook</a></p>`
             }
 
@@ -195,7 +222,7 @@ async function runScraper() {
                 title: aiData.title,
                 content: aiData.content,
                 summary: aiData.summary,
-                sourceUrl: postUrl,
+                sourceUrl: cleanPostUrl, // Guardamos la URL limpia
                 publishedAt: postDate,
                 mainImage: mainImage,
                 gallery: gallery,

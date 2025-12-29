@@ -45,9 +45,12 @@ export async function extractMedia(rawPost: any): Promise<ExtractedMedia> {
         }
     }
 
-    // 3. Direct fields
+    // 3. Direct fields & Fallbacks
     if (rawPost.imageUrl) candidateImages.add(rawPost.imageUrl)
     if (rawPost.fullImage) candidateImages.add(rawPost.fullImage)
+    // Support for top-level Facebook fields (common in pfbid posts)
+    if (rawPost.full_picture) candidateImages.add(rawPost.full_picture)
+    if (rawPost.thumbnail) candidateImages.add(rawPost.thumbnail)
 
     // upload
     const uniqueCandidates = Array.from(candidateImages)
