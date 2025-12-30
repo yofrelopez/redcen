@@ -105,7 +105,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Barranca",
         district: "Barranca",
-        // scrapeHour: 18
+        scrapeHour: 18
     },
     {
         name: "Municipalidad Provincial De Huaral",
@@ -116,7 +116,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Huaura",
         district: "Huaral",
-        // scrapeHour: 18
+        scrapeHour: 18
     },
     {
         name: "Municipalidad Distrital de Chancay",
@@ -127,7 +127,7 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Huaura",
         district: "Chancay",
-        // scrapeHour: 18
+        scrapeHour: 18
     },
     {
         name: "Eps Barranca",
@@ -138,6 +138,6 @@ export const INSTITUTIONS_REGISTRY: Institution[] = [
         region: "Lima",
         province: "Barranca",
         district: "Barranca",
-        // scrapeHour: 18
+        scrapeHour: 18
     }
 ]
