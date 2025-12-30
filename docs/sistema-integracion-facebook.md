@@ -39,32 +39,75 @@ Son los eventos que activan el servicio.
 ### 3. Utilidades de Prueba
 *   **Archivo**: `scripts/local/test-fb.ts` (Ignorado por Git)
 *   **Función**: Script aislado que permite a los desarrolladores probar la conexión y credenciales de Facebook sin necesidad de crear contenido real en la base de datos.
+*   **Generador de Tokens**: [`scripts/get-permanent-token.js`](../scripts/get-permanent-token.js) (Para renovar credenciales).
 
 ### 4. Configuración
 *   **Archivo**: `.env`
 *   **Variables Requeridas**:
-    *   `FB_PAGE_ID`: El identificador numérico de la Fanpage.
-    *   `FB_PAGE_ACCESS_TOKEN`: El token de seguridad con permisos `pages_manage_posts` y `pages_read_engagement`.
+    *   `FB_PAGE_ID`: El identificador numérico de la Fanpage Principal.
+    *   `FB_PAGE_ACCESS_TOKEN`: Token de la página principal.
+    *   `FB_SECONDARY_PAGE_ACCESS_TOKEN`: Token de la página de eco (Barranca Noticias).
 
 ---
 
-## 🔄 Flujo de Datos
+## 🔐 Gestión de Credenciales y Tokens (GUÍA TÉCNICA)
 
-```mermaid
-graph TD
-    A[Nueva Noticia] --> B{¿Origen?}
-    B -- Scraper/IA --> C[Webhook Ingest]
-    B -- CMS Manual --> D[Server Action]
+Esta sección explica cómo funcionan los tokens de Facebook y cómo generarlos correctamente para evitar que caduquen.
+
+### 1. Tipos de Tokens y su Ciclo de Vida
+
+Facebook tiene 3 niveles de tokens. Es CRÍTICO entender la diferencia:
+
+| Tipo | Duración | ¿Para qué sirve? | Nivel de Seguridad |
+| :--- | :--- | :--- | :--- |
+| **Token de Usuario Corto** | 1 hora | Pruebas rápidas en el navegador. Se obtiene en el *Graph API Explorer*. | 🔴 Bajo (Caduca muy rápido) |
+| **Token de Usuario Largo** | 60 días | Se obtiene intercambiando el "Corto" + "App Credentials". Es el puente necesario. | 🟡 Medio |
+| **Token de Página "Permanente"** | **Indefinido*** | Se obtiene usando el "Usuario Largo". Solo deja de funcionar si cambias tu contraseña de Facebook. **ESTE ES EL QUE NECESITAMOS.** | 🟢 Alto (Producción) |
+
+*> \*Indefinido: Significa que no tiene fecha de expiración automática, pero puede revocarse por cambios de seguridad en la cuenta personal.*
+
+### 2. ¿Por qué fallan los tokens?
+
+El error común es hacer esto:
+❌ *Token Corto (Explorer) -> Obtener Token de Página -> Usarlo en el Bot.*
+**Resultado:** El Token de Página hereda la vida del corto. **Muere en 1 hora.**
+
+El camino correcto es:
+✅ *Token Corto -> **CANJE (Script)** -> Token de Usuario Largo -> Obtener Token de Página -> Usarlo en el Bot.*
+**Resultado:** Token sin fecha de expiración configurada.
+
+### 3. Guía Paso a Paso para Generar Tokens "Permanentes"
+
+No necesitas Business Manager estrictamente si usas este método de "Canje de Token".
+
+**Requisitos Previos:**
+- Tener una App creada en [developers.facebook.com](https://developers.facebook.com).
+- Tener el `App ID` y `App Secret` de esa App.
+- Ser Administrador de la Fanpage.
+
+**Pasos de Ejecución:**
+
+1.  **Obtener Token Semilla (Corto):**
+    - Ve a [Graph API Explorer](https://developers.facebook.com/tools/explorer/).
+    - Selecciona tu App.
+    - Permisos: `pages_manage_posts`, `pages_read_engagement`, `pages_show_list`.
+    - Generar Access Token. Copialo.
+
+2.  **Ejecutar Script de Intercambio:**
+    REDCEN incluye una herramienta automatizada para hacer el canje criptográfico.
     
-    C --> E[FacebookService.smartQueuePublish]
-    D --> E
-    
-    E --> F{¿Hay Cola?}
-    F -- NO --> G[Publicar AHORA]
-    F -- SI --> H[Obtener fecha última nota + 11 min]
-    
-    G --> I[Facebook Graph API]
-    H --> I
-    
-    I --> J[Actualizar DB: facebookScheduledFor]
-```
+     Ejecuta en tu terminal:
+    ```bash
+    node scripts/get-permanent-token.js
+    ```
+
+3.  **Seguir Instrucciones del Script:**
+    - Pega tu `App ID`.
+    - Pega tu `App Secret`.
+    - Pega el Token Semilla (Corto).
+
+4.  **Resultado:**
+    - El script te dará un Token nuevo y largo para cada página que administres.
+    - Copia el token correspondiente a "Barranca Noticias" y pégalo en tu `.env` como `FB_SECONDARY_PAGE_ACCESS_TOKEN`.
+
+⚠️ **Nota Importante:** Este proceso NO afecta a los tokens que ya tengas configurados (como el de Redcen). Cada token es independiente. Si el de Redcen funciona, **NO LO TOQUES**. Solo genera el nuevo para Barranca Noticias.

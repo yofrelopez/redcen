@@ -173,7 +173,12 @@ export const FacebookService = {
      */
     async publishPost(message: string, link?: string, options?: { scheduled_publish_time?: number, pageIdOverride?: string }) {
         const pageId = options?.pageIdOverride || process.env.FB_PAGE_ID
-        const accessToken = process.env.FB_PAGE_ACCESS_TOKEN
+
+        let accessToken = process.env.FB_PAGE_ACCESS_TOKEN
+        // [CRITICAL] If target is Secondary Page, use Secondary Token
+        if (options?.pageIdOverride === SECONDARY_PAGE_ID) {
+            accessToken = process.env.FB_SECONDARY_PAGE_ACCESS_TOKEN || accessToken
+        }
 
         if (!pageId || !accessToken) {
             console.warn("⚠️ FacebookService: Credenciales no configuradas. Saltando publicación.")
