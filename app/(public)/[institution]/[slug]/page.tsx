@@ -13,6 +13,7 @@ import { MoreFromAuthor } from "@/components/notes/public/more-from-author"
 import { LatestNewsSection } from "@/components/notes/public/latest-news-section"
 
 import { DynamicNoteContent as NoteContent } from "@/components/notes/public/dynamic-note-content"
+import { StickyShareBar } from "@/components/notes/public/sticky-share-bar"
 
 interface NotePageProps {
     params: Promise<{
@@ -183,6 +184,12 @@ export default async function NotePage({ params }: NotePageProps) {
                     </div>
                 </div>
             </article>
+
+            {/* Mobile Sticky Share Bar */}
+            <StickyShareBar
+                title={note.title}
+                url={`${SITE_URL}/${institutionParam ?? ""}/${slugParam ?? ""}`}
+            />
         </>
     )
 }
