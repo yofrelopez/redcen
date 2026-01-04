@@ -13,6 +13,7 @@ import { MoreFromAuthor } from "@/components/notes/public/more-from-author"
 import { LatestNewsSection } from "@/components/notes/public/latest-news-section"
 
 import { DynamicNoteContent as NoteContent } from "@/components/notes/public/dynamic-note-content"
+import { PodcastPlayer } from "@/components/notes/public/podcast-player"
 import { StickyShareBar } from "@/components/notes/public/sticky-share-bar"
 
 interface NotePageProps {
@@ -165,7 +166,27 @@ export default async function NotePage({ params }: NotePageProps) {
                         alt={note.title}
                     />
 
-                    <NoteContent content={note.content} />
+                    {/* Podcast Player Integration (Phase 12) */}
+                    {(() => {
+                        const podcastMatch = note.content.match(/<!-- PODCAST_URL: (.*?) -->/);
+                        if (podcastMatch && podcastMatch[1]) {
+                            const audioUrl = podcastMatch[1];
+                            const cleanContent = note.content.replace(podcastMatch[0], ''); // Remove marker from text
+
+                            return (
+                                <>
+                                    <PodcastPlayer
+                                        src={audioUrl}
+                                        title={note.title}
+                                        date={note.createdAt}
+                                    />
+                                    <NoteContent content={cleanContent} />
+                                </>
+                            );
+                        }
+                        // Default render if no podcast found
+                        return <NoteContent content={note.content} />;
+                    })()}
 
                     <NoteGallery images={note.gallery} />
 

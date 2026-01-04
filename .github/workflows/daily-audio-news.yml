@@ -1,0 +1,50 @@
+name: Daily Audio News
+
+on:
+  schedule:
+    # 6:00 AM Tarija (GMT-4) = 10:00 AM UTC
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  produce-audio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'scripts/audio-news-worker/package-lock.json'
+
+      - name: Install Dependencies (Worker)
+        working-directory: scripts/audio-news-worker
+        run: npm install
+
+      # We rely on ffmpeg-static from package.json, so no need for apt-get install ffmpeg
+      # unless we want system ffmpeg. Sticking to node dependencies is more robust here.
+
+      - name: Run Audio Worker
+        working-directory: scripts/audio-news-worker
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_DOMAIN: ${{ secrets.R2_PUBLIC_DOMAIN }}
+        run: npm start
+
+      - name: Upload Artifact (Debug)
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-brief-mp3
+          path: scripts/audio-news-worker/output/*.mp3
+          retention-days: 7
