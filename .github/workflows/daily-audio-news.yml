@@ -25,8 +25,11 @@ jobs:
         working-directory: scripts/audio-news-worker
         run: npm install
 
-      # We rely on ffmpeg-static from package.json, so no need for apt-get install ffmpeg
-      # unless we want system ffmpeg. Sticking to node dependencies is more robust here.
+      # We rely on ffmpeg-static from package.json
+      
+      - name: Create Google Credentials File
+        working-directory: scripts/audio-news-worker
+        run: echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > google.json
 
       - name: Run Audio Worker
         working-directory: scripts/audio-news-worker
