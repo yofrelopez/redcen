@@ -1,0 +1,7 @@
+node_modules
+.env
+output
+# assets/*.mp3 (Allowed: We need intro/outro/bg)
+!assets/.keep
+run_log_*.txt
+google.json
