@@ -60,9 +60,10 @@ verify_output.txt
 verification_report.txt
 
 # Google Cloud Credentials
+# Google Cloud Credentials
 google.json
 **/google.json
-*.json
+# *.json <--- REMOVED DANGEROUS WILDCARD which broke the build
 !package.json
 !tsconfig.json
 
