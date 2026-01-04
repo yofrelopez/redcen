@@ -36,9 +36,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "node_modules",
-  "_BACKUP",
-  "scripts/local",
-  "scripts/audio-news-worker"
-]
+  "exclude": [
+    "node_modules",
+    "_BACKUP",
+    "scripts/local",
+    "scripts/audio-news-worker"
+  ]
 }
