@@ -4,9 +4,17 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 
+// @ts-ignore
+import ffprobeStatic from 'ffprobe-static';
+
 // Ensure ffmpeg binary is set
 if (pathToFfmpeg) {
     ffmpeg.setFfmpegPath(pathToFfmpeg);
+}
+
+// Ensure ffprobe binary is set
+if (ffprobeStatic && ffprobeStatic.path) {
+    ffmpeg.setFfprobePath(ffprobeStatic.path);
 }
 
 export async function produceFinalAudio(
