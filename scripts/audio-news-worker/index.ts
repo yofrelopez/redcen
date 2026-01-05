@@ -86,7 +86,37 @@ async function main() {
             newsItems: news // Passing the news array for the formatted list
         });
 
-        if (slug) console.log(`🎉 SUCCESS! Podcast published at: https://redcen.com/nota/${slug}`);
+        if (slug) {
+            console.log(`🎉 SUCCESS! Podcast published at: https://redcen.com/nota/${slug}`);
+
+            // 6. Trigger Facebook Share (The Bridge)
+            const siteUrl = process.env.SITE_URL;
+            const secret = process.env.INGEST_API_SECRET;
+
+            if (siteUrl && secret) {
+                try {
+                    console.log('📡 Triggering Facebook Social Share...');
+                    const response = await fetch(`${siteUrl}/api/webhooks/trigger-social`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${secret}`
+                        },
+                        body: JSON.stringify({ slug })
+                    });
+
+                    if (response.ok) {
+                        console.log('✅ Facebook Share Triggered Successfully');
+                    } else {
+                        console.error('⚠️ Facebook Share Trigger Failed:', await response.text());
+                    }
+                } catch (err) {
+                    console.error('❌ Error calling social webhook:', err);
+                }
+            } else {
+                console.log('⚠️ SITE_URL or INGEST_API_SECRET missing. Skipping Facebook trigger.');
+            }
+        }
 
     } catch (err) {
         console.error('❌ Worker Failed:', err);
