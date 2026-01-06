@@ -12,9 +12,10 @@ interface PageProps {
 export default async function EditNotePage({ params }: PageProps) {
     const { id } = await params
     const session = await auth()
-    const [note, categories] = await Promise.all([
+    const [note, categories, institutions] = await Promise.all([
         getNote(id),
         getCategories(),
+        session?.user?.role === "ADMIN" ? await import("@/actions/notes").then(mod => mod.getInstitutions()) : []
     ])
 
     if (!note) {
@@ -40,7 +41,12 @@ export default async function EditNotePage({ params }: PageProps) {
                     </span>
                 </div>
             </div>
-            <EditNoteForm note={note} categories={categories} isAdmin={isAdmin} />
+            <EditNoteForm
+                note={note}
+                categories={categories}
+                isAdmin={isAdmin}
+                institutions={institutions}
+            />
         </div>
     )
 }

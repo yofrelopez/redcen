@@ -52,6 +52,34 @@ export async function createNote(formData: FormData) {
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)+/g, "") + "-" + Date.now()
 
+        // Fetch Author Details for Branding (OG Image)
+        const author = await prisma.user.findUnique({
+            where: { id: authorId },
+            select: { name: true, abbreviation: true, logo: true }
+        })
+
+        let finalOgImage = null
+
+        if (author) {
+            try {
+                // Dynamic Import to avoid bundling issues if any
+                const { generateStaticOgImage } = await import("@/lib/services/og-generator");
+
+                console.log(`🎨 Generando OG Image Manual para: ${slug}`);
+                finalOgImage = await generateStaticOgImage({
+                    title,
+                    slug,
+                    mainImage: mainImage || null,
+                    authorName: author.name || "Redacción Central",
+                    abbreviation: author.abbreviation,
+                    authorLogo: author.logo
+                });
+            } catch (ogError) {
+                console.error("⚠️ Falló generación OG Manual:", ogError);
+                // Fallback handled by public page logic or we can set it to mainImage here
+            }
+        }
+
         console.log("Creating note with data:", { title, slug, authorId })
 
         const newNote = await prisma.pressNote.create({
@@ -75,6 +103,7 @@ export async function createNote(formData: FormData) {
                 scheduledFor,
                 authorId, // Use the determined authorId
                 published: isPublished,
+                ogImage: finalOgImage, // ✅ Save Generated Image
             },
         })
 
@@ -93,6 +122,9 @@ export async function createNote(formData: FormData) {
                 console.error("❌ Error loading Facebook Service:", err)
             }
         }
+
+        revalidatePath("/dashboard/notas")
+        revalidatePath("/dashboard/admin/notas")
 
         return { success: true }
     } catch (error: any) {
@@ -144,6 +176,49 @@ export async function updateNote(id: string, formData: FormData) {
         throw new Error("No tienes permiso para editar esta nota")
     }
 
+    // --- Admin: Author Change Logic ---
+    let newAuthorId = undefined;
+    let newOgImage = undefined;
+
+    const impersonatedAuthorId = formData.get("impersonatedAuthorId") as string
+    if (session.user.role === "ADMIN" && impersonatedAuthorId) {
+        // Determine intended author
+        const targetId = impersonatedAuthorId === "me" ? session.user.id : impersonatedAuthorId;
+
+        // If author CHANGED, we must regenerate the OG Image
+        if (targetId !== note.authorId) {
+            newAuthorId = targetId;
+            console.log(`🔄 Cambio de Autor detectado: ${note.authorId} -> ${newAuthorId}`);
+
+            // Fetch New Author Branding
+            const newAuthor = await prisma.user.findUnique({
+                where: { id: newAuthorId },
+                select: { name: true, abbreviation: true, logo: true }
+            });
+
+            if (newAuthor) {
+                try {
+                    const { generateStaticOgImage } = await import("@/lib/services/og-generator");
+                    console.log(`🎨 Regenerando OG Image para nuevo autor: ${newAuthor.name}`);
+
+                    newOgImage = await generateStaticOgImage({
+                        title: title || note.title, // Use new title or existing
+                        slug: note.slug,
+                        mainImage: (mainImage || note.mainImage) || null,
+                        authorName: newAuthor.name || "Redacción Central",
+                        abbreviation: newAuthor.abbreviation,
+                        authorLogo: newAuthor.logo
+                    });
+                } catch (ogError) {
+                    console.error("⚠️ Falló regeneración OG al cambiar autor:", ogError);
+                    // Decide if we keep old or null. Null is safer to force fallback.
+                    // newOgImage = null; 
+                }
+            }
+        }
+    }
+    // ----------------------------------
+
     try {
         await prisma.pressNote.update({
             where: { id },
@@ -165,10 +240,14 @@ export async function updateNote(id: string, formData: FormData) {
                 metaDescription,
                 tags,
                 scheduledFor,
+                // Optional Updates
+                ...(newAuthorId && { authorId: newAuthorId }),
+                ...(newOgImage && { ogImage: newOgImage }),
             },
         })
 
         revalidatePath("/dashboard/notas")
+        revalidatePath("/dashboard/admin/notas") // Also revalidate admin list
         revalidatePath(`/dashboard/notas/${id}`)
 
         return { success: true }
@@ -349,7 +428,7 @@ export async function searchNotes({
 
 export async function getInstitutions() {
     return await prisma.user.findMany({
-        where: { role: "INSTITUTION" },
+        // where: { role: "INSTITUTION" }, // Removed to include logic ALL users (Admin, Journalist, etc.)
         select: {
             id: true,
             name: true,

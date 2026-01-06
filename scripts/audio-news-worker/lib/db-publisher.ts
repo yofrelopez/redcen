@@ -95,18 +95,74 @@ export async function publishPodcastNote(data: {
         // Generate CUID-like ID (simple version for script)
         const id = 'not_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
+        // --- NEW: Centralized OG Image Generation (with Fallback) ---
+        let finalOgImage = data.imageUrl; // Default fallback to main image
+        const INGEST_API_SECRET = process.env.INGEST_API_SECRET;
+        // Derive Base URL from INGEST_URL or default to localhost
+        const BASE_URL = process.env.INGEST_URL ? new URL(process.env.INGEST_URL).origin : "http://localhost:3000";
+        const OG_API_URL = `${BASE_URL}/api/services/og-generator`;
+
+        try {
+            console.log(`🎨 Requesting Official OG Image from: ${OG_API_URL}`);
+            const ogResponse = await fetch(OG_API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${INGEST_API_SECRET}`
+                },
+                body: JSON.stringify({
+                    title: data.title,
+                    slug: slug,
+                    authorName: "Redacción Central", // Or fetch specific author name if available
+                    abbreviation: "R C", // Initial for fallback logo
+                    mainImage: data.imageUrl
+                })
+            });
+
+            if (ogResponse.ok) {
+                const ogResult: any = await ogResponse.json();
+                if (ogResult.success && ogResult.url) {
+                    finalOgImage = ogResult.url;
+                    console.log(`✅ OG Image Received: ${finalOgImage}`);
+                } else {
+                    console.warn(`⚠️ OG Service returned failure:`, ogResult.error);
+                }
+            } else {
+                console.warn(`⚠️ OG Service Failed (${ogResponse.status}): ${await ogResponse.text()}`);
+            }
+
+        } catch (ogError: any) {
+            console.warn(`⚠️ OG Generation Failed (Network/Logic) - Using Fallback. Error: ${ogError.message}`);
+            // finalOgImage remains as data.imageUrl
+        }
+        // ------------------------------------------------------------
+
         const values = [
             id,
             data.title,
             slug,
             data.summary,
             contentHtml,
-            data.imageUrl,
+            data.imageUrl, // mainImage (Always original)
             true, // Published
             'PODCAST',
             authorId,
             ['Resumen Diario', 'Podcast', 'IA'],
+            finalOgImage // ogImage
         ];
+
+        // Update Query to include ogImage
+        const query = `
+            INSERT INTO "PressNote" (
+                id, title, slug, summary, content, 
+                "mainImage", "published", "type", 
+                "authorId", "tags", "createdAt", "updatedAt", "ogImage"
+            ) VALUES (
+                $1, $2, $3, $4, $5, 
+                $6, $7, $8, 
+                $9, $10, NOW(), NOW(), $11
+            ) RETURNING id, slug;
+        `;
 
         const res = await client.query(query, values);
         console.log(`📝 Podcast published: ${res.rows[0].slug}`);

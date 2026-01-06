@@ -81,9 +81,11 @@ export function DropdownMenuTrigger({
 export function DropdownMenuContent({
     children,
     align = "end",
+    className = "",
 }: {
     children: React.ReactNode
     align?: "start" | "end" | "center"
+    className?: string
 }) {
     const { isOpen } = useDropdown()
 
@@ -97,7 +99,7 @@ export function DropdownMenuContent({
 
     return (
         <div
-            className={`absolute z-50 mt-2 w-56 rounded-md border border-gray-100 bg-white p-1 shadow-md animate-in fade-in zoom-in-95 data-[side=bottom]:slide-in-from-top-2 ${alignmentClasses[align]}`}
+            className={`absolute z-50 mt-2 w-56 rounded-md border border-gray-100 bg-white p-1 shadow-md animate-in fade-in zoom-in-95 data-[side=bottom]:slide-in-from-top-2 ${alignmentClasses[align]} ${className}`}
         >
             {children}
         </div>

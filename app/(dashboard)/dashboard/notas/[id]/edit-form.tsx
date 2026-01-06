@@ -23,19 +23,23 @@ interface EditNoteFormProps {
         metaTitle: string | null
         metaDescription: string | null
         tags: string[]
+        authorId: string // Added ID
     }
     categories: Array<{ id: string; name: string }>
+    institutions?: Array<{ id: string; name: string | null; email: string; logo: string | null }>
     isAdmin?: boolean
 }
 
-export default function EditNoteForm({ note, categories, isAdmin }: EditNoteFormProps) {
+export default function EditNoteForm({ note, categories, isAdmin, institutions }: EditNoteFormProps) {
     return (
         <NoteForm
             initialData={{
                 ...note,
                 noteType: note.type,
+                authorId: note.authorId // Pass explicit authorID
             }}
             categories={categories}
+            institutions={institutions}
             action={updateNote.bind(null, note.id)}
             isAdmin={isAdmin}
         />

@@ -6,10 +6,12 @@ import { toast } from "sonner"
 
 import 'tippy.js/dist/tippy.css'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus'
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu'
+import FloatingMenuExtension from '@tiptap/extension-floating-menu'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
-// import Image from '@tiptap/extension-image' // Removed standard image
 import Youtube from '@tiptap/extension-youtube'
 import { Iframe } from '@/components/ui/editor/extensions/iframe-extension'
 import { ImageExtended } from '@/components/ui/extensions/image-extended'
@@ -49,6 +51,13 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                     levels: [2, 3],
                 },
             }),
+            BubbleMenuExtension.configure({
+                pluginKey: 'bubbleMenu',
+            }),
+            FloatingMenuExtension.configure({
+                pluginKey: 'floatingMenu',
+            }),
+            // ... other extensions (Placeholder, Link, ImageExtended, Youtube, Iframe, slashCommand) ...
             Placeholder.configure({
                 placeholder: 'Escribe el contenido de tu nota aquí... (Escribe "/" para comandos)',
             }),
@@ -84,26 +93,10 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                 class: 'prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl focus:outline-none min-h-[300px] w-full max-w-none text-gray-700 leading-relaxed px-4 py-2',
             },
         },
-        immediatelyRender: false, // Critical for Next.js to avoid hydration mismatch
+        immediatelyRender: false,
     })
 
-    // Keep reference to editor updated
-    useEffect(() => {
-        editorRef.current = editor
-    }, [editor])
-
-    // Listen for custom upload event
-    useEffect(() => {
-        const handleOpenUpload = (e: CustomEvent) => {
-            rangeRef.current = e.detail?.range
-            uploadBtnRef.current?.click()
-        }
-
-        document.addEventListener('open-cloudinary-upload', handleOpenUpload as EventListener)
-        return () => {
-            document.removeEventListener('open-cloudinary-upload', handleOpenUpload as EventListener)
-        }
-    }, [])
+    // ... useEffects ...
 
     if (!editor) {
         return null
@@ -134,10 +127,75 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
     )
 
     return (
-        <div className="bg-white transition-all focus-within:ring-0">
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-1 p-2 border-b border-white bg-white">
-                <div className="flex items-center gap-1 pr-2 border-r border-gray-200 mr-2">
+        <div className="bg-white transition-all focus-within:ring-0 relative">
+
+            {/* --- Bubble Menu (Selection) --- */}
+            {editor && (
+                <BubbleMenu editor={editor} className="flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().toggleBold().run()}
+                        isActive={editor.isActive('bold')}
+                        title="Negrita"
+                    >
+                        <Bold className="h-4 w-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().toggleItalic().run()}
+                        isActive={editor.isActive('italic')}
+                        title="Cursiva"
+                    >
+                        <Italic className="h-4 w-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                        isActive={editor.isActive('heading', { level: 2 })}
+                        title="Título"
+                    >
+                        <Heading2 className="h-4 w-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                        isActive={editor.isActive('blockquote')}
+                        title="Cita"
+                    >
+                        <Quote className="h-4 w-4" />
+                    </ToolbarButton>
+                </BubbleMenu>
+            )}
+
+            {/* --- Floating Menu (Empty Line) --- */}
+            {editor && (
+                <FloatingMenu editor={editor} className="flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl px-1 py-1 gap-1">
+                    <button
+                        type="button"
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                        className="flex items-center gap-2 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                    >
+                        <Heading2 className="h-3 w-3" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => editor.chain().focus().toggleBulletList().run()}
+                        className="flex items-center gap-2 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                    >
+                        <List className="h-3 w-3" />
+                    </button>
+                    {/* Add Image Button Trigger for Floating Menu */}
+                    <button
+                        type="button"
+                        onClick={() => uploadBtnRef.current?.click()}
+                        className="flex items-center gap-2 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                        title="Insertar Imagen"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
+                    </button>
+                </FloatingMenu>
+            )}
+
+            {/* Toolbar (Static) preserved for fallback */}
+            <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-50 bg-white sticky top-0 z-10">
+                {/* ... existing toolbar content ... */}
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-100 mr-2">
                     <ToolbarButton
                         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
                         isActive={editor.isActive('heading', { level: 2 })}
@@ -154,7 +212,7 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                     </ToolbarButton>
                 </div>
 
-                <div className="flex items-center gap-1 pr-2 border-r border-gray-200 mr-2">
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-100 mr-2">
                     <ToolbarButton
                         onClick={() => editor.chain().focus().toggleBold().run()}
                         isActive={editor.isActive('bold')}
@@ -171,7 +229,7 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                     </ToolbarButton>
                 </div>
 
-                <div className="flex items-center gap-1 pr-2 border-r border-gray-200 mr-2">
+                <div className="flex items-center gap-1 pr-2 border-r border-gray-100 mr-2">
                     <ToolbarButton
                         onClick={() => editor.chain().focus().toggleBulletList().run()}
                         isActive={editor.isActive('bulletList')}
@@ -197,6 +255,12 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
 
                 <div className="flex items-center gap-1 ml-auto">
                     <ToolbarButton
+                        onClick={() => uploadBtnRef.current?.click()}
+                        title="Insertar Imagen"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
+                    </ToolbarButton>
+                    <ToolbarButton
                         onClick={() => editor.chain().focus().undo().run()}
                         title="Deshacer"
                     >
@@ -216,7 +280,7 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                 <EditorContent editor={editor} />
             </div>
 
-            {/* Hidden Cloudinary Uploader */}
+            {/* ... hidden uploader ... */}
             <CldUploadWidget
                 onSuccess={handleUploadDefault}
                 uploadPreset="redcen_preset"

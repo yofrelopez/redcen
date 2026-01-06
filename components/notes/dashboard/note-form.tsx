@@ -15,6 +15,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section"
 interface NoteFormProps {
     initialData?: {
         id?: string
+        authorId?: string // New field
         title: string
         summary: string | null
         content: string
@@ -50,7 +51,7 @@ export function NoteForm({ initialData, categories, institutions = [], isAdmin =
 
     // Key Content State
     // ... existing ... 
-    const [authorId, setAuthorId] = useState("") // New state for impersonation
+    const [authorId, setAuthorId] = useState(initialData?.authorId || "") // New state for impersonation
     const [title, setTitle] = useState(initialData?.title || "")
     const [summary, setSummary] = useState(initialData?.summary || "")
     const [content, setContent] = useState(initialData?.content || "")
@@ -164,7 +165,6 @@ export function NoteForm({ initialData, categories, institutions = [], isAdmin =
                     } else {
                         router.push("/dashboard/notas")
                     }
-                    router.refresh()
                 }
             } catch (error) {
                 toast.error("Error al guardar la nota")
