@@ -74,8 +74,8 @@ export async function produceFinalAudio(
                 '[1:a]loudnorm=I=-14:TP=-1.0:LRA=7[processed_speech]',
                 '[0:a][processed_speech][2:a]concat=n=3:v=0:a=1[voice]',
                 // Background(3) volume adjust = node [music]
-                // Increased to 0.35 (approx +15%) as per user request to be more present
-                '[3:a]volume=0.35[music]',
+                // Increased to 0.45 (approx +10% bump) to ensure action is felt
+                '[3:a]volume=0.45[music]',
                 // Mix voice and music. 
                 // duration=first means stop when the first input (voice, because we put it first in filter?) 
                 // Actually amix doesn't have "first". 'shortest' input option might help.

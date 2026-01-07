@@ -80,6 +80,31 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
         />
     ))
 
+    const handleShare = async () => {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: title,
+                    text: `Escucha el podcast de: ${title}`,
+                    url: window.location.href,
+                })
+            } catch (err) {
+                console.log('User cancelled share', err)
+            }
+        } else {
+            // Fallback for desktop: Copy to clipboard
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                // Could add a toast here, but for now simple fallback
+                alert("Enlace copiado al portapapeles");
+            } catch (e) {
+                console.error("Clipboard failed", e);
+            }
+        }
+    }
+
+    // ... existing helper functions ...
+
     return (
         <div
             className="w-full max-w-4xl mx-auto my-8 font-sans group relative shadow-2xl rounded-2xl overflow-hidden transform hover:-translate-y-1 transition-all duration-300"
@@ -87,17 +112,21 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Main Container - Deep Blue Gradient (Brand) */}
-            <div className="bg-gradient-to-br from-[#002FA4] to-[#001a5c] text-white p-6 md:p-8 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#002FA4] to-[#001a5c] text-white p-5 md:p-8 relative overflow-hidden">
 
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#F44E00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
-                <div className="flex flex-col md:flex-row gap-6 md:items-center relative z-10">
+                <div className="flex flex-col md:flex-row gap-6 items-center relative z-10">
 
                     {/* Play Button - Big Orange Circle */}
                     <div className="flex-shrink-0 relative">
                         {isPlaying && (
-                            <div className="absolute inset-0 bg-[#F44E00]/30 rounded-full animate-ping" />
+                            // Changed to a double ring pulse which is usually cleaner on mobile than 'ping'
+                            <>
+                                <div className="absolute inset-0 bg-[#F44E00]/20 rounded-full animate-ping duration-1000" />
+                                <div className="absolute inset-0 bg-[#F44E00]/40 rounded-full animate-pulse" />
+                            </>
                         )}
                         <button
                             onClick={togglePlay}
@@ -113,7 +142,7 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                     </div>
 
                     {/* Content Area */}
-                    <div className="flex-grow min-w-0 flex flex-col justify-center gap-1">
+                    <div className="flex-grow min-w-0 flex flex-col justify-center gap-1 w-full">
                         {/* Meta Row: Date & Status */}
                         <div className="flex items-center gap-3 text-xs md:text-sm text-blue-200/80 mb-1">
                             <span className="uppercase tracking-wider font-bold text-[#F44E00]">Redcen Podcast</span>
@@ -171,17 +200,23 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                         </div>
                     </div>
 
-                    {/* Extra Controls (Desktop) */}
-                    <div className="hidden md:flex flex-col gap-2 items-center justify-center pl-4 border-l border-white/10">
+                    {/* Controls (Responsive: Row on Mobile, Col on Desktop) */}
+                    <div className="flex flex-row md:flex-col gap-4 md:gap-2 items-center justify-center w-full md:w-auto md:pl-4 md:border-l md:border-white/10 border-t border-white/10 md:border-t-0 pt-4 md:pt-0">
                         <button
                             onClick={toggleSpeed}
-                            className="p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors text-xs font-bold"
+                            className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors text-xs font-bold"
                             title="Velocidad"
                         >
+                            <FastForward className="w-4 h-4 md:hidden" /> {/* Icon for mobile */}
                             {playbackRate}x
                         </button>
-                        <button className="p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors">
+                        <button
+                            onClick={handleShare}
+                            className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors"
+                            title="Compartir"
+                        >
                             <Share2 className="w-5 h-5" />
+                            <span className="md:hidden text-xs font-bold">Compartir</span> {/* Text for mobile clarity */}
                         </button>
                     </div>
                 </div>
