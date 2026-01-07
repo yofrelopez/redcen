@@ -80,18 +80,6 @@ export async function publishPodcastNote(data: {
             </div>
         `;
 
-        const query = `
-            INSERT INTO "PressNote" (
-                id, title, slug, summary, content, 
-                "mainImage", "published", "type", 
-                "authorId", "tags", "createdAt", "updatedAt"
-            ) VALUES (
-                $1, $2, $3, $4, $5, 
-                $6, $7, $8, 
-                $9, $10, NOW(), NOW()
-            ) RETURNING id, slug;
-        `;
-
         // Generate CUID-like ID (simple version for script)
         const id = 'not_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
@@ -165,7 +153,7 @@ export async function publishPodcastNote(data: {
         `;
 
         const res = await client.query(query, values);
-        console.log(`📝 Podcast published: ${res.rows[0].slug}`);
+        console.log(`📝 Podcast published: https://redcen.com/boletin-redcen/${res.rows[0].slug}`);
 
         return res.rows[0].slug;
 

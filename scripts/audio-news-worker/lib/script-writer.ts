@@ -11,7 +11,7 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
     }
 
     const newsContent = news.map((n, i) =>
-        `Noticia ${i + 1}:\nTitulo: ${n.title}\nResumen: ${n.summary}\nContenido: ${n.content.substring(0, 500)}...`
+        `Noticia ${i + 1}:\nTitulo: ${n.title}\nResumen: ${n.summary}\nContenido: ${n.content.substring(0, 1500)}...`
     ).join('\n\n');
 
     const dateStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -20,7 +20,7 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
         noticias: news.map(n => ({
             institucion: n.institution,
             titular: n.title,
-            contenido: n.content.substring(0, 300) // Contexto suficiente para nombres
+            contenido: n.content.substring(0, 1500) // Contexto completo para narración detallada
         }))
     });
 
@@ -28,24 +28,30 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
     Actúa como el equipo de producción de 'Redacción Central' (Redcen), un noticiero radial líder en Perú.
     Tu tarea es escribir un GUION DE RADIO DOBLE (ALEJANDRA y JAIME) basado en noticias AGRUPADAS POR INSTITUCIÓN.
 
+    OBJETIVO DE TIEMPO: El guion debe durar MÍNIMO 4 MINUTOS al ser leído.
+    ESTA ES LA REGLA MÁS IMPORTANTE: NO RESUMAS EXCESIVAMENTE. TIENES QUE CONTAR LA HISTORIA.
+
     FORMATO DE SALIDA (Estricto):
     [ALEJANDRA]: ...
     [JAIME]: ...
     
     ESTRUCTURA OBLIGATORIA:
-    1. INTRO: Saludo y fecha de hoy (Ej: "¡Hoy es [FECHA]!").
+    1. INTRO: Saludo enérgico y fecha de hoy (Ej: "¡Hoy es [FECHA]!").
     2. DESARROLLO (Bloques Institucionales):
        - DEBES anunciar claramente cuando cambias de institución.
-       - Ej: [ALEJANDRA]: "Iniciamos con noticias de la [INSTITUCION]..."
-       - Ej: [JAIME]: "Ahora vamos con información de [INSTITUCION]..."
-       - Luego del anuncio, lee los titulares o resumenes breves de esa institución.
+       - Ej: [ALEJANDRA]: "Pasamos ahora a noticias de la [INSTITUCION]..."
+       - Ej: [JAIME]: "Revisamos que sucede en [INSTITUCION]..."
+       - DENTRO DE CADA NOTICIA:
+         * NARRA EL CONTEXTO: ¿Qué pasó? ¿Por qué es importante? ¿Qué dijeron los protagonistas?
+         * Dedica al menos 40 segundos de lectura a cada noticia principal.
+         * NO solo leas el titular. Explica la noticia como si se la contaras a un amigo.
     3. CIERRE: Despedida rápida e invitación a redcen.com.
 
     REGLAS DE ORO:
     1. PROTAGONISTAS: Menciona SIEMPRE los nombres de personas si aparecen en el texto (Alcaldes, Gerentes, Rectores). ¡Es vital!
     2. NÚMEROS A LETRAS: "2026" -> "dos mil veintiséis".
     3. CERO ALUCINACIONES: Solo usa la info provista. Si no hay nombre, no inventes.
-    4. TONO: Serio pero dinámico. 
+    4. TONO: Serio, profesional, pero dinámico y explicativo. 
   `;
 
     try {

@@ -16,13 +16,16 @@ export async function getTopNews(): Promise<NewsItem[]> {
         ssl: { rejectUnauthorized: false }
     });
 
+    const TARGET_NEWS_COUNT = 15;
+    const FRESH_HOURS = 10;
+    const BACKFILL_HOURS = 36;
+
     try {
         await client.connect();
 
-        // Fetch candidates (more than we need, to apply filtering)
-        // JOIN User to get Institution Name
-        // Filter: active users, published notes, last 48 hours for broader catch
-        const query = `
+        // --- STEP 1: FRESH NEWS (Prioritize strict new content) ---
+        console.log(`📰 Fetching FRESH news (Last ${FRESH_HOURS}h)...`);
+        const freshQuery = `
             SELECT 
                 p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
                 u.name as "institutionName"
@@ -30,55 +33,49 @@ export async function getTopNews(): Promise<NewsItem[]> {
             JOIN "User" u ON p."authorId" = u.id
             WHERE p.published = true
             AND u."isActive" = true
-            AND u.slug != 'boletin-redcen' -- Exclude the bot itself to avoid recursion
-            AND p."createdAt" > NOW() - INTERVAL '72 hours'
+            AND u.slug != 'boletin-redcen'
+            AND p."createdAt" > NOW() - INTERVAL '${FRESH_HOURS} hours'
             ORDER BY u.name ASC, p."createdAt" DESC
-            LIMIT 50; 
+            LIMIT 30; 
         `;
+        const freshRes = await client.query(freshQuery);
+        let freshItems = mapRowsToNewsItems(freshRes.rows);
 
-        const res = await client.query(query);
-        const rawItems = res.rows;
+        console.log(`✅ Found ${freshItems.length} Fresh items.`);
 
-        // Grouping & Filtering Logic (Max 3 per Inst, Max 10 Total)
-        const grouped: { [key: string]: NewsItem[] } = {};
+        // --- STEP 2: SMART BACKFILL (If needed) ---
+        let finalSelection = [...freshItems];
 
-        rawItems.forEach(row => {
-            const institution = row.institutionName || 'Redacción Central';
-            if (!grouped[institution]) grouped[institution] = [];
+        if (finalSelection.length < TARGET_NEWS_COUNT) {
+            const needed = TARGET_NEWS_COUNT - finalSelection.length;
+            console.log(`⚠️ Quota not met. Need ${needed} more. Initiating Backfill (Last ${BACKFILL_HOURS}h)...`);
 
-            // Limit per Institution: Max 3
-            if (grouped[institution].length < 3) {
-                grouped[institution].push({
-                    id: row.id,
-                    title: row.title,
-                    summary: row.summary || '',
-                    content: row.content,
-                    url: `https://redcen.com/nota/${row.slug}`,
-                    institution: institution,
-                    date: new Date(row.createdAt)
-                });
-            }
-        });
+            // Get IDs to exclude
+            const existingIds = finalSelection.map(n => `'${n.id}'`).join(',') || "''";
 
-        // Flatten and Limit Total: Max 10
-        let finalSelection: NewsItem[] = [];
+            const backfillQuery = `
+                SELECT 
+                    p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
+                    u.name as "institutionName"
+                FROM "PressNote" p
+                JOIN "User" u ON p."authorId" = u.id
+                WHERE p.published = true
+                AND u."isActive" = true
+                AND u.slug != 'boletin-redcen'
+                AND p."createdAt" > NOW() - INTERVAL '${BACKFILL_HOURS} hours'
+                AND p.id NOT IN (${existingIds}) -- Exclude already selected
+                ORDER BY p."createdAt" DESC -- Prioritize newest among the old
+                LIMIT ${needed + 5}; -- Fetch a bit more to filter
+            `;
 
-        // Strategy: Round-robin or just concat? 
-        // User asked for "Institution Block", so we should keep them grouped.
-        // We simply take the groups and concat them until we hit 10.
+            const backfillRes = await client.query(backfillQuery);
+            const backfillItems = mapRowsToNewsItems(backfillRes.rows);
 
-        for (const inst in grouped) {
-            if (finalSelection.length >= 10) break;
-
-            const batch = grouped[inst];
-            // Take as many as fit in the remaining slot
-            const remainingSlots = 10 - finalSelection.length;
-            const toAdd = batch.slice(0, remainingSlots);
-
-            finalSelection = finalSelection.concat(toAdd);
+            console.log(`📦 Found ${backfillItems.length} Backfill items.`);
+            finalSelection = finalSelection.concat(backfillItems).slice(0, TARGET_NEWS_COUNT);
         }
 
-        console.log(`📰 Selected ${finalSelection.length} news items from ${Object.keys(grouped).length} institutions.`);
+        console.log(`📰 Final Selection: ${finalSelection.length} news items.`);
         return finalSelection;
 
     } catch (err) {
@@ -87,4 +84,16 @@ export async function getTopNews(): Promise<NewsItem[]> {
     } finally {
         await client.end();
     }
+}
+
+function mapRowsToNewsItems(rows: any[]): NewsItem[] {
+    return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        summary: row.summary || '',
+        content: row.content,
+        url: `https://redcen.com/nota/${row.slug}`,
+        institution: row.institutionName || 'Redacción Central',
+        date: new Date(row.createdAt)
+    }));
 }
