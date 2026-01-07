@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Share2, MoreHorizontal, Download, FastForward } from "lucide-react"
+import { Play, Pause, Share2, Download, FastForward, Volume2, Volume1, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface PodcastPlayerProps {
@@ -16,6 +16,8 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
     const [duration, setDuration] = useState(0)
     const [currentTime, setCurrentTime] = useState(0)
     const [playbackRate, setPlaybackRate] = useState(1)
+    const [volume, setVolume] = useState(1) // Default 100%
+    const [isMuted, setIsMuted] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
 
     // Format date specifically like the example: "Estados Unidos" (Region) vs Title
@@ -37,6 +39,25 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
         const newRate = playbackRate === 1 ? 1.5 : (playbackRate === 1.5 ? 2 : 1)
         audioRef.current.playbackRate = newRate
         setPlaybackRate(newRate)
+    }
+
+    const toggleMute = () => {
+        if (!audioRef.current) return
+        const newMuted = !isMuted
+        audioRef.current.muted = newMuted
+        setIsMuted(newMuted)
+    }
+
+    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value)
+        setVolume(value)
+        if (audioRef.current) {
+            audioRef.current.volume = value
+            if (value > 0) {
+                setIsMuted(false)
+                audioRef.current.muted = false
+            }
+        }
     }
 
     const handleTimeUpdate = () => {
@@ -103,7 +124,20 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
         }
     }
 
-    // ... existing helper functions ...
+    const handleDownload = () => {
+        // Create a temporary link element to trigger download
+        const link = document.createElement('a');
+        link.href = src;
+        link.download = `redcen-audio-${date.toISOString().slice(0, 10)}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Safe calculation for progress bar to prevent NaN/Infinity issues
+    const progressPercent = duration && !isNaN(duration) && duration > 0
+        ? (currentTime / duration) * 100
+        : 0;
 
     return (
         <div
@@ -111,18 +145,16 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Main Container - Deep Blue Gradient (Brand) */}
-            <div className="bg-gradient-to-br from-[#002FA4] to-[#001a5c] text-white p-5 md:p-8 relative overflow-hidden">
+            {/* ... (UI code remains the same until progress bar) ... */}
 
-                {/* Background Decor */}
+            <div className="bg-gradient-to-br from-[#002FA4] to-[#001a5c] text-white p-5 md:p-8 relative overflow-hidden">
+                {/* ... (Background & Play Button) ... */}
+
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#F44E00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
                 <div className="flex flex-col md:flex-row gap-6 items-center relative z-10">
-
-                    {/* Play Button - Big Orange Circle */}
                     <div className="flex-shrink-0 relative">
                         {isPlaying && (
-                            // Changed to a double ring pulse which is usually cleaner on mobile than 'ping'
                             <>
                                 <div className="absolute inset-0 bg-[#F44E00]/20 rounded-full animate-ping duration-1000" />
                                 <div className="absolute inset-0 bg-[#F44E00]/40 rounded-full animate-pulse" />
@@ -141,9 +173,7 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                         </button>
                     </div>
 
-                    {/* Content Area */}
                     <div className="flex-grow min-w-0 flex flex-col justify-center gap-1 w-full">
-                        {/* Meta Row: Date & Status */}
                         <div className="flex items-center gap-3 text-xs md:text-sm text-blue-200/80 mb-1">
                             <span className="uppercase tracking-wider font-bold text-[#F44E00]">Redcen Podcast</span>
                             <span className="w-1 h-1 rounded-full bg-blue-400/50" />
@@ -155,7 +185,6 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                             )}
                         </div>
 
-                        {/* Scrolling Ticker Title */}
                         <div className="relative h-8 md:h-10 overflow-hidden w-full mask-linear-fade">
                             <h2
                                 className={cn(
@@ -179,7 +208,7 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                                 {/* Track */}
                                 <div
                                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#F44E00] to-orange-400 rounded-full relative"
-                                    style={{ width: `${(currentTime / duration) * 100}%` }}
+                                    style={{ width: `${progressPercent}%` }}
                                 >
                                     {/* Handle */}
                                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover/progress:opacity-100 transition-opacity" />
@@ -187,7 +216,7 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                                 <input
                                     type="range"
                                     min={0}
-                                    max={duration}
+                                    max={duration || 100} // Fallback to avoid range error
                                     value={currentTime}
                                     onChange={handleSeek}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -195,39 +224,87 @@ export function PodcastPlayer({ src, title, date }: PodcastPlayerProps) {
                             </div>
 
                             <span className="text-xs font-mono text-blue-200 tabular-nums w-10">
-                                {formatTime(duration)}
+                                {duration && !isNaN(duration) ? formatTime(duration) : '--:--'}
                             </span>
                         </div>
                     </div>
 
+
                     {/* Controls (Responsive: Row on Mobile, Col on Desktop) */}
                     <div className="flex flex-row md:flex-col gap-4 md:gap-2 items-center justify-center w-full md:w-auto md:pl-4 md:border-l md:border-white/10 border-t border-white/10 md:border-t-0 pt-4 md:pt-0">
+                        {/* Download Button */}
                         <button
-                            onClick={toggleSpeed}
-                            className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors text-xs font-bold"
-                            title="Velocidad"
+                            onClick={handleDownload}
+                            className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors"
+                            title="Descargar"
                         >
-                            <FastForward className="w-4 h-4 md:hidden" /> {/* Icon for mobile */}
-                            {playbackRate}x
+                            <Download className="w-5 h-5" />
+                            <span className="md:hidden text-xs font-bold">Descargar</span>
                         </button>
+
+                        {/* Share Button */}
                         <button
                             onClick={handleShare}
                             className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors"
                             title="Compartir"
                         >
                             <Share2 className="w-5 h-5" />
-                            <span className="md:hidden text-xs font-bold">Compartir</span> {/* Text for mobile clarity */}
+                            <span className="md:hidden text-xs font-bold">Compartir</span>
+                        </button>
+
+                        {/* Playback Speed */}
+                        <button
+                            onClick={toggleSpeed}
+                            className="flex items-center gap-2 px-3 py-2 md:p-2 rounded-full hover:bg-white/10 text-blue-100 transition-colors text-xs font-bold"
+                            title="Velocidad"
+                        >
+                            <FastForward className="w-4 h-4 md:hidden" />
+                            {playbackRate}x
                         </button>
                     </div>
                 </div>
+
+                {/* Volume Control Row (Desktop: Hover | Mobile: Always visible below) */}
+                <div className="hidden md:flex absolute bottom-4 right-8 gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#001a5c]/80 p-2 rounded-full backdrop-blur-sm">
+                    <button onClick={toggleMute} className="text-blue-200 hover:text-white">
+                        {isMuted || volume === 0 ? <VolumeX size={16} /> : volume < 0.5 ? <Volume1 size={16} /> : <Volume2 size={16} />}
+                    </button>
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={isMuted ? 0 : volume}
+                        onChange={handleVolumeChange}
+                        className="w-20 h-1 bg-blue-900 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#F44E00] [&::-webkit-slider-thumb]:rounded-full"
+                    />
+                </div>
+                {/* Mobile Volume (Simple Row below main controls) */}
+                <div className="md:hidden mt-4 pt-4 border-t border-white/5 flex items-center gap-3 px-4">
+                    <button onClick={toggleMute} className="text-blue-200">
+                        {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    </button>
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={isMuted ? 0 : volume}
+                        onChange={handleVolumeChange}
+                        className="flex-grow h-1 bg-blue-900 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#F44E00] [&::-webkit-slider-thumb]:rounded-full"
+                    />
+                </div>
+
             </div>
 
             {/* Hidden Audio Element */}
             <audio
                 ref={audioRef}
                 src={src}
+                preload="metadata"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
+                onDurationChange={handleLoadedMetadata} // Safari/Mobile often fires this instead
                 onEnded={() => setIsPlaying(false)}
             />
         </div>
