@@ -249,13 +249,19 @@ async function main() {
 
         try {
             // Lazy import to ensure environment is fully loaded
-            const { FacebookService } = await import('../../lib/services/facebook');
+            // Use local lightweight client
+            const { FacebookClient } = await import('./lib/facebook-client');
 
-            console.log('🚀 Uploading Video to Facebook Fanpage (ID: ' + process.env.FB_PAGE_ID + ')...');
-            const fbResult = await FacebookService.publishPost(
+            const pageId = process.env.FB_PAGE_ID!;
+            const token = process.env.FB_PAGE_ACCESS_TOKEN!;
+
+            console.log('🚀 Uploading Video to Facebook Fanpage (ID: ' + pageId + ')...');
+
+            const fbResult = await FacebookClient.publishVideo(
                 `${title}\n\n${summary}\n\n#Redcen #Noticias #ResumenDiario`,
-                undefined,
-                { videoUrl: videoUrl! }
+                videoUrl!,
+                pageId,
+                token
             );
 
             if (fbResult.success) {
@@ -265,7 +271,7 @@ async function main() {
             }
 
         } catch (fbErr) {
-            console.error('❌ Error using FacebookService:', fbErr);
+            console.error('❌ Error using FacebookClient:', fbErr);
         }
 
     } catch (err) {
