@@ -1,0 +1,56 @@
+name: Daily News Reel
+
+on:
+  schedule:
+    # Lima is UTC-5.
+    # 05:00 AM Lima = 10:00 UTC
+    # 01:00 PM Lima = 18:00 UTC
+    - cron: '0 10,18 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  generate-and-publish:
+    name: Generate & Publish Reel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # Give enough time for rendering (~3-5 mins typical)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Video Worker
+        env:
+          # Database
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          
+          # Content Generation
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          
+          # Storage (Cloudflare R2)
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_DOMAIN: ${{ secrets.R2_PUBLIC_DOMAIN }}
+          
+          # Social Media
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          
+          # Application
+          SITE_URL: "https://redcen.com" # Hardcoded or use secret
+          
+        run: npx tsx scripts/audio-news-worker/index.ts

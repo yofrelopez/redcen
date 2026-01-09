@@ -55,8 +55,8 @@ async function main() {
         }
 
         // --- TEST MODE: LIMIT TO 3 ITEMS ---
-        console.log('⚠️ TEST MODE: Limiting to top 3 news items for fast video generation.');
-        news = news.slice(0, 3);
+        // console.log('⚠️ TEST MODE: Limiting to top 3 news items for fast video generation.');
+        // news = news.slice(0, 3);
         // -----------------------------------
 
         console.log(`🔹 Found ${news.length} news items.`);
@@ -238,53 +238,34 @@ async function main() {
 
         // 8. Publish to Redcen DB
         logHeader('📰 STEP 8: PUBLISHING TO DATABASE');
+        console.log('⏭️ SKIPPING DB PUBLISH (Separate Video Robot Mode).');
 
-        // Construct Title: "Redacción Central Al Día - [Fecha]"
+        // 9. Trigger Facebook Share DIRECTLY
+        logHeader('📡 STEP 9: FACEBOOK VIDEO UPLOAD');
+
         const dateStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         const title = `Redacción Central Al Día - ${dateStr}`;
+        const summary = "Lo que debes saber hoy en nuestra región y el país.";
 
-        const slug = await publishPodcastNote({
-            title: title,
-            summary: "Lo que debes saber hoy en nuestra región y el país. Escúchalo aquí.",
-            audioUrl: audioUrl,
-            imageUrl: imageUrl,
-            newsItems: news // Passing the news array for the formatted list
-        });
+        try {
+            // Lazy import to ensure environment is fully loaded
+            const { FacebookService } = await import('../../lib/services/facebook');
 
-        if (slug) {
-            logHeader('🎉 PROCESS COMPLETED SUCCESSFULLY');
-            console.log(`👉 Published at: https://redcen.com/nota/${slug}`);
+            console.log('🚀 Uploading Video to Facebook Fanpage (ID: ' + process.env.FB_PAGE_ID + ')...');
+            const fbResult = await FacebookService.publishPost(
+                `${title}\n\n${summary}\n\n#Redcen #Noticias #ResumenDiario`,
+                undefined,
+                { videoUrl: videoUrl! }
+            );
 
-            // 9. Trigger Facebook Share
-            const siteUrl = process.env.SITE_URL;
-            const secret = process.env.INGEST_API_SECRET;
-
-            if (siteUrl && secret) {
-                try {
-                    console.log('📡 Triggering Facebook Social Share...');
-                    const response = await fetch(`${siteUrl}/api/webhooks/trigger-social`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${secret}`
-                        },
-                        body: JSON.stringify({
-                            slug,
-                            videoUrl // Pass the video URL
-                        })
-                    });
-
-                    if (response.ok) {
-                        console.log('✅ Webhook triggered successfully.');
-                    } else {
-                        console.error('❌ Webhook failed:', response.status, await response.text());
-                    }
-                } catch (err) {
-                    console.error('❌ Error calling webhook:', err);
-                }
+            if (fbResult.success) {
+                console.log('✅ Facebook Upload Successful. Post ID:', fbResult.postId);
             } else {
-                console.log('⚠️ SITE_URL or INGEST_API_SECRET missing. Skipping Facebook trigger.');
+                console.error('❌ Facebook Upload Failed:', fbResult.error);
             }
+
+        } catch (fbErr) {
+            console.error('❌ Error using FacebookService:', fbErr);
         }
 
     } catch (err) {
