@@ -1,2 +1,0 @@
-ffmpeg exited with code 4294967274: frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
-Conversion failed!

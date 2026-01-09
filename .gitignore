@@ -59,7 +59,15 @@ scripts/extract-tokens.js
 verify_output.txt
 verification_report.txt
 
-# Google Cloud Credentials
+# Debug & Logs (Global)
+*.log
+debug_*.txt
+debug_*.json
+ffmpeg_*.txt
+proof_*.jpg
+diagnostic_*.txt
+*.ttf
+
 # Google Cloud Credentials
 google.json
 **/google.json
