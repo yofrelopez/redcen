@@ -3,7 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-export async function generateAudioFromScript(script: string): Promise<string[]> {
+import ffmpeg from 'fluent-ffmpeg';
+
+export interface AudioSegment {
+    filePath: string;
+    imageIndex?: number;
+    duration: number;
+}
+
+export async function generateAudioFromScript(script: string): Promise<AudioSegment[]> {
     // Hybrid Auth: Env Var (Prod) or File (Local)
     let clientConfig: any = {};
 
@@ -24,15 +32,15 @@ export async function generateAudioFromScript(script: string): Promise<string[]>
 
     // 1. Parse Script for Voices
     // Expected format: "[ALEJANDRA]: Text... [JAIME]: Text..."
-    const segments = script.split(/\[(ALEJANDRA|JAIME)\]:/i).filter(s => s.trim().length > 0);
+    const rawSegments = script.split(/\[(ALEJANDRA|JAIME)\]:/i).filter(s => s.trim().length > 0);
 
     const tempDir = path.join(os.tmpdir(), 'redcen-audio-worker');
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const audioFilePaths: string[] = [];
-    console.log(`🎙️ Processing ${segments.length} script parts with Google Cloud TTS...`);
+    const audioSegments: AudioSegment[] = [];
+    console.log(`🎙️ Processing ${rawSegments.length} script parts with Google Cloud TTS...`);
 
     // Voice Configuration (Neural2 - US Spanish for stability)
     const VOICE_CONFIG = {
@@ -42,24 +50,36 @@ export async function generateAudioFromScript(script: string): Promise<string[]>
 
     let currentSpeakerName: 'ALEJANDRA' | 'JAIME' = 'ALEJANDRA';
 
-    for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i].trim();
+    for (let i = 0; i < rawSegments.length; i++) {
+        let segmentText = rawSegments[i].trim();
 
-        // Check for speaker change markers
-        if (segment.toUpperCase() === 'ALEJANDRA') {
+        // Check for speaker change markers (The split creates alternating [Name, Text] or just text if captured)
+        if (segmentText.toUpperCase() === 'ALEJANDRA') {
             currentSpeakerName = 'ALEJANDRA';
             continue;
-        } else if (segment.toUpperCase() === 'JAIME') {
+        } else if (segmentText.toUpperCase() === 'JAIME') {
             currentSpeakerName = 'JAIME';
             continue;
         }
 
-        // Sanitize text (Minimal cleaning, Google is robust)
-        const cleanSegment = segment.replace(/[\*\[\]]/g, '').trim();
+        // --- IMAGE MARKER EXTRACTION ---
+        // Regex to find [IMAGEN: 2]
+        // We might have multiple images in one block? Usually one per news start.
+        // We attach the image index to the segment.
+        let imageIndex: number | undefined = undefined;
+        const imgMatch = segmentText.match(/\[IMAGEN:\s*(\d+)\]/i);
+        if (imgMatch) {
+            imageIndex = parseInt(imgMatch[1], 10);
+            // Remove the tag from text so TTS doesn't read it
+            segmentText = segmentText.replace(/\[IMAGEN:\s*\d+\]/gi, '');
+        }
+
+        // Sanitize text
+        const cleanSegment = segmentText.replace(/[\*\[\]]/g, '').trim();
         if (!cleanSegment || cleanSegment.length < 2) continue;
 
         const speakerConfig = VOICE_CONFIG[currentSpeakerName];
-        console.log(`🗣️ Generating (${currentSpeakerName} - ${speakerConfig.name}): "${cleanSegment.substring(0, 30)}..."`);
+        console.log(`🗣️ Generating (${currentSpeakerName}): "${cleanSegment.substring(0, 30)}..." ${imageIndex !== undefined ? `[📸 IMG: ${imageIndex}]` : ''}`);
 
         try {
             // Google Cloud TTS Request
@@ -72,15 +92,24 @@ export async function generateAudioFromScript(script: string): Promise<string[]>
                 },
                 audioConfig: {
                     audioEncoding: 'MP3',
-                    speakingRate: 1.15, // 15% Faster for news agility (Google default is bit slow)
-                    volumeGainDb: 1.0   // Slight boost
+                    speakingRate: 1.15,
+                    volumeGainDb: 1.0
                 },
             });
 
             const buffer = Buffer.from(response.audioContent as Uint8Array);
-            const filePath = path.join(tempDir, `segment_${audioFilePaths.length}_${currentSpeakerName}.mp3`);
+            const fileName = `segment_${audioSegments.length}_${currentSpeakerName}.mp3`;
+            const filePath = path.join(tempDir, fileName);
             fs.writeFileSync(filePath, buffer);
-            audioFilePaths.push(filePath);
+
+            // Calculate Duration using ffprobe
+            const duration = await getAudioDuration(filePath);
+
+            audioSegments.push({
+                filePath,
+                imageIndex, // Pass the extracted index
+                duration
+            });
 
         } catch (error) {
             console.error(`Error generating audio for segment ${i}:`, error);
@@ -88,5 +117,14 @@ export async function generateAudioFromScript(script: string): Promise<string[]>
         }
     }
 
-    return audioFilePaths;
+    return audioSegments;
+}
+
+export function getAudioDuration(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(filePath, (err, metadata) => {
+            if (err) return reject(err);
+            resolve(metadata.format.duration || 0);
+        });
+    });
 }

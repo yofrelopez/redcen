@@ -39,8 +39,10 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
     1. INTRO: Saludo enérgico y fecha de hoy (Ej: "¡Hoy es [FECHA]!").
     2. DESARROLLO (Bloques Institucionales):
        - DEBES anunciar claramente cuando cambias de institución.
-       - Ej: [ALEJANDRA]: "Pasamos ahora a noticias de la [INSTITUCION]..."
-       - Ej: [JAIME]: "Revisamos que sucede en [INSTITUCION]..."
+       - IMPORTANTÍSIMO: Antes de empezar a leer una noticia nueva, inserta la etiqueta: [IMAGEN: <NUMERO_ÍNDICE_NOTICIA>]
+         (Donde <NUMERO_ÍNDICE_NOTICIA> es el índice del array de noticias, empezando en 0).
+       - Ej: [ALEJANDRA]: "Pasamos ahora a noticias de la [INSTITUCION]..." [IMAGEN: 2] "La Universidad anunció..."
+       - Ej: [JAIME]: "Revisamos que sucede en [INSTITUCION]..." [IMAGEN: 3] "El alcalde declaró..."
        - DENTRO DE CADA NOTICIA:
          * NARRA EL CONTEXTO: ¿Qué pasó? ¿Por qué es importante? ¿Qué dijeron los protagonistas?
          * Dedica al menos 40 segundos de lectura a cada noticia principal.
@@ -52,6 +54,7 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
     2. NÚMEROS A LETRAS: "2026" -> "dos mil veintiséis".
     3. CERO ALUCINACIONES: Solo usa la info provista. Si no hay nombre, no inventes.
     4. TONO: Serio, profesional, pero dinámico y explicativo. 
+    5. MARCADORES VISUALES: No olvides los tags [IMAGEN: N]. Son vitales para el video.
   `;
 
     try {

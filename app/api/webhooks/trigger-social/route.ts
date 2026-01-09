@@ -12,36 +12,30 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // 2. Parse Body
-        const { slug } = await req.json();
+        const body = await req.json();
+        const { slug, videoUrl } = body; // Extract videoUrl
+
         if (!slug) {
-            return NextResponse.json({ error: "Missing slug" }, { status: 400 });
+            return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
         }
 
-        // 3. Find Note
-        const note = await prisma.pressNote.findUnique({
-            where: { slug },
-            select: { id: true, title: true, summary: true, slug: true }
+        console.log(`📥 Received Social Trigger for: ${slug} ${videoUrl ? '(Has Video)' : ''}`);
+
+        // 2. Fetch the Note from DB
+        const pressNote = await prisma.pressNote.findUnique({
+            where: { slug }
         });
 
-        if (!note) {
-            return NextResponse.json({ error: "Note not found" }, { status: 404 });
+        if (!pressNote) {
+            return NextResponse.json({ error: 'Note not found' }, { status: 404 });
         }
 
-        console.log(`📡 [Trigger-Social] Received request for: ${slug}`);
+        // 3. Queue for Facebook (Main Page)
+        // We pass the videoUrl as an override option
+        const fbResult = await FacebookService.smartQueuePublish(pressNote, { videoUrl });
 
         // --- PRE-WARM OG IMAGE ---
-        // DEPRECATED: La imagen ya se genera físicamente en 'publishPodcastNote' antes de llegar aquí.
-        // Se ha eliminado el fetch HEAD para optimizar velocidad.
-        // -------------------------
-
-        // 4. Trigger Facebook Smart Queue
-        const fbResult = await FacebookService.smartQueuePublish({
-            id: note.id,
-            title: note.title,
-            summary: note.summary,
-            slug: note.slug
-        });
+        // DEPRECATED: Image is generated before.
 
         if (!fbResult.success) {
             console.error("❌ Facebook Trigger Failed:", fbResult.error);

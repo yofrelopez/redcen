@@ -1,24 +1,40 @@
 import dotenv from 'dotenv';
 import path from 'path';
-
-// Load .env from project root
-// Load .env from project root
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../.env.local') }); // Override with local config
 import fs from 'fs';
 import { getTopNews } from './lib/news-selector';
 import { generateScript } from './lib/script-writer';
-import { generateAudioFromScript } from './lib/audio-generator';
+import { generateAudioFromScript, getAudioDuration } from './lib/audio-generator';
 import { produceFinalAudio } from './lib/producer';
-import { uploadAudio } from './lib/uploader';
+import { uploadFile } from './lib/uploader';
 import { generateCoverImage } from './lib/image-generator';
 import { publishPodcastNote } from './lib/db-publisher';
+import { generateVideo } from './lib/video-generator';
+import axios from 'axios';
+
+// Load Environment Variables
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../../.env.local') }); // Override with local config
 
 // Helper for visible logs
-function logHeader(title: string) {
-    console.log('\n================================================================');
-    console.log(` ${title} `);
-    console.log('================================================================\n');
+function logHeader(msg: string) {
+    console.log('\n' + '='.repeat(50));
+    console.log(` ${msg}`);
+    console.log('='.repeat(50));
+}
+
+async function downloadImage(url: string, destPath: string): Promise<string | null> {
+    try {
+        const response = await axios({
+            url,
+            method: 'GET',
+            responseType: 'arraybuffer'
+        });
+        fs.writeFileSync(destPath, response.data);
+        return destPath;
+    } catch (error) {
+        console.warn('⚠️ Failed to download image:', url);
+        return null;
+    }
 }
 
 async function main() {
@@ -32,12 +48,18 @@ async function main() {
 
         // 1. Fetch News
         logHeader('📰 STEP 1: FETCHING NEWS');
-        const news = await getTopNews();
+        let news = await getTopNews();
         if (news.length === 0) {
-            console.log('⚠️ No news found. Exiting gracefully.');
+            console.log('❌ No news found.');
             return;
         }
-        console.log(`✅ Fetched ${news.length} articles.`);
+
+        // --- TEST MODE: LIMIT TO 3 ITEMS ---
+        console.log('⚠️ TEST MODE: Limiting to top 3 news items for fast video generation.');
+        news = news.slice(0, 3);
+        // -----------------------------------
+
+        console.log(`🔹 Found ${news.length} news items.`);
 
         // 2. Write Script
         logHeader('📝 STEP 2: GENERATING SCRIPT');
@@ -68,23 +90,154 @@ async function main() {
         }
 
         const finalAudioPath = await produceFinalAudio(audioSegments, assetsDir, outputDir);
-        console.log('✅ Production Complete:', finalAudioPath);
+        console.log('✅ Final Audio Ready:', finalAudioPath);
 
-        // 5. Upload to R2
-        logHeader('☁️ STEP 5: UPLOADING TO R2');
-        const audioUrl = await uploadAudio(finalAudioPath);
-        console.log('🚀 Daily Brief URL:', audioUrl);
+        // 5. Generate Video Reel (NEW STEP)
+        logHeader('🎬 STEP 5: GENERATING VIDEO REEL');
 
-        // 6. Generate Cover Image (Phase 12)
-        logHeader('🎨 STEP 6: GENERATING COVER IMAGE');
+        // 5.1 Download Images for Video
+        logHeader('🖼️ STEP 5: PREPARING VIDEO ASSETS');
+
+        // REMOTION REQUIREMENT: Assets must be in public/ folder
+        const publicTempDir = path.join(__dirname, '../../public/temp_reels');
+        if (!fs.existsSync(publicTempDir)) fs.mkdirSync(publicTempDir, { recursive: true });
+
+        const downloadedImages: string[] = new Array(news.length).fill('');
+
+        // Relative paths for Remotion (from public root)
+        const remotionImagePaths: string[] = new Array(news.length).fill('');
+
+        for (let i = 0; i < news.length; i++) {
+            if (news[i].imageUrl) {
+                const ext = path.extname(news[i].imageUrl || '') || '.jpg';
+                const fileName = `news_${i}${ext}`;
+                const dest = path.join(publicTempDir, fileName);
+
+                // Always download fresh
+                const result = await downloadImage(news[i].imageUrl!, dest);
+                if (result) {
+                    downloadedImages[i] = dest; // Absolute for debug/checks
+                    remotionImagePaths[i] = `/temp_reels/${fileName}`; // Web path for Remotion
+                }
+            }
+        }
+
+        // 5.2 Create Video
+        let videoUrl: string | null = null;
+        try {
+            // FIX: Inject "Intro Segment" to align video with audio
+            const introPath = path.join(assetsDir, 'intro.mp3');
+            let introDuration = 0;
+            if (fs.existsSync(introPath)) {
+                introDuration = await getAudioDuration(introPath);
+                console.log(`⏱️ Intro Duration detected: ${introDuration}s`);
+            }
+
+            // INTRO IMAGE handling
+            // We need a specific intro cover in public/temp_reels
+            const introCoverName = 'intro_cover.png';
+            const introCoverDest = path.join(publicTempDir, introCoverName);
+            // Copy from script output if exists, or use logo/fallback
+            const generatedCover = path.join(outputDir, 'temp_images/intro_cover.png'); // From step 3?
+            // Actually Step 3 generated `outputDir/cover.jpg` for podcast note.
+            // Let's copy that cover.jpg or use a default.
+            // For now, let's use the first news image or logo if logic implies.
+            // Wait, the previous code had logic for intro image. 
+            // Simplified: Use the first news image as intro background if specific cover not generated.
+
+            // REMOTION AUDIO: Must copy final audio to public
+            const audioFileName = `daily_mix_${Date.now()}.mp3`;
+            const publicAudioPath = path.join(publicTempDir, audioFileName);
+            fs.copyFileSync(finalAudioPath, publicAudioPath);
+            const remotionAudioUrl = `/temp_reels/${audioFileName}`;
+
+            // Detect Outro Duration
+            const outroPath = path.join(assetsDir, 'outro.mp3');
+            let outroDuration = 0;
+            if (fs.existsSync(outroPath)) {
+                outroDuration = await getAudioDuration(outroPath);
+                console.log(`⏱️ Outro Duration detected: ${outroDuration}s`);
+            }
+
+            // Update Segments Logic to shift indices
+            // 4. Prepend Virtual Intro Segment & Outro
+            audioSegments.forEach(seg => {
+                if (seg.imageIndex !== undefined) seg.imageIndex += 1;
+            });
+
+            audioSegments.unshift({
+                filePath: 'virtual_intro',
+                duration: introDuration,
+                imageIndex: 0
+            });
+
+            if (outroDuration > 0) {
+                audioSegments.push({
+                    filePath: 'virtual_outro',
+                    duration: outroDuration,
+                    imageIndex: -99
+                });
+            }
+
+            // Prepare Remotion Image Array
+            // [0] = Intro, [1..N] = News
+            // We need an Intro Image at index 0. 
+            // Let's use the first available news image or a placeholder
+            const firstValidNewsImg = remotionImagePaths.find(p => p !== '') || '/images/logo_claro_2.png';
+            const finalRemotionImages = [firstValidNewsImg, ...remotionImagePaths];
+
+
+            const videoPath = path.join(outputDir, `daily_reel_DEBUG_FINAL.mp4`);
+            console.log('🎥 Generating video at:', videoPath);
+            console.log('👉 DEBUG: Calling generateVideo() with Public Assets...');
+
+            await generateVideo({
+                audioSegments,
+                newsImages: finalRemotionImages, // Already formatted as /temp_reels/...
+                mixedAudioPath: remotionAudioUrl, // /temp_reels/audio.mp3
+                outputpath: videoPath,
+                assetsDir,
+                news
+            });
+            console.log('✅ Video Generated:', videoPath);
+
+            // 5.3 Upload Video
+            console.log('☁️ Uploading Video...');
+            videoUrl = await uploadFile(videoPath, 'daily-reels');
+            console.log('🚀 Reel URL:', videoUrl);
+
+        } catch (vErr) {
+            console.error('❌ Video generation failed:', vErr);
+            throw vErr; // Fail hard to debug
+        }
+
+
+        // 6. Upload Audio
+        let audioUrl = '';
+        if (!process.argv.includes('--video-preview')) {
+            logHeader('☁️ STEP 6: UPLOADING AUDIO');
+            audioUrl = await uploadFile(finalAudioPath, 'daily-briefs');
+            console.log('🚀 Daily Brief URL:', audioUrl);
+        } else {
+            console.log('⏭️ Skipping Audio Upload in Preview Mode.');
+        }
+
+        if (process.argv.includes('--video-preview')) {
+            console.log('🛑 Video Preview Mode: Skipping Database Publish & Social Trigger.');
+            console.log('✅ Cycle Completed. Please review the Video URL above.');
+            return;
+        }
+
+        // 7. Generate Cover Image 
+        logHeader('🎨 STEP 7: GENERATING COVER IMAGE');
         // Extract headlines for prompt
         const headlines = news.map(n => n.title);
         const imageUrl = await generateCoverImage(headlines);
         if (imageUrl) console.log('✅ Image Ready:', imageUrl);
         else console.warn('⚠️ Image Generation failed, proceeding without it.');
 
-        // 7. Publish to Redcen DB (Phase 12)
-        logHeader('📰 STEP 7: PUBLISHING TO DATABASE');
+        // 8. Publish to Redcen DB
+        logHeader('📰 STEP 8: PUBLISHING TO DATABASE');
 
         // Construct Title: "Redacción Central Al Día - [Fecha]"
         const dateStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -102,7 +255,7 @@ async function main() {
             logHeader('🎉 PROCESS COMPLETED SUCCESSFULLY');
             console.log(`👉 Published at: https://redcen.com/nota/${slug}`);
 
-            // 6. Trigger Facebook Share (The Bridge)
+            // 9. Trigger Facebook Share
             const siteUrl = process.env.SITE_URL;
             const secret = process.env.INGEST_API_SECRET;
 
@@ -115,16 +268,19 @@ async function main() {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${secret}`
                         },
-                        body: JSON.stringify({ slug })
+                        body: JSON.stringify({
+                            slug,
+                            videoUrl // Pass the video URL
+                        })
                     });
 
                     if (response.ok) {
-                        console.log('✅ Facebook Share Triggered Successfully');
+                        console.log('✅ Webhook triggered successfully.');
                     } else {
-                        console.error('⚠️ Facebook Share Trigger Failed:', await response.text());
+                        console.error('❌ Webhook failed:', response.status, await response.text());
                     }
                 } catch (err) {
-                    console.error('❌ Error calling social webhook:', err);
+                    console.error('❌ Error calling webhook:', err);
                 }
             } else {
                 console.log('⚠️ SITE_URL or INGEST_API_SECRET missing. Skipping Facebook trigger.');

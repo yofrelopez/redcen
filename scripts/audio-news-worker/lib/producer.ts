@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 
+import { AudioSegment } from './audio-generator';
+
 // @ts-ignore
 import ffprobeStatic from 'ffprobe-static';
 
@@ -18,7 +20,7 @@ if (ffprobeStatic && ffprobeStatic.path) {
 }
 
 export async function produceFinalAudio(
-    speechFiles: string[],
+    audioSegments: AudioSegment[],
     assetsDir: string,
     outputDir: string
 ): Promise<string> {
@@ -37,7 +39,7 @@ export async function produceFinalAudio(
     console.log('Production: Concatenating speech logs...');
     await new Promise<void>((resolve, reject) => {
         const cmd = ffmpeg();
-        speechFiles.forEach(file => cmd.input(file));
+        audioSegments.forEach(seg => cmd.input(seg.filePath));
 
         cmd
             .on('error', reject)

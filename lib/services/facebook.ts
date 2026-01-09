@@ -69,7 +69,7 @@ export const FacebookService = {
      * Maneja la lógica de Cola Inteligente para publicar o programar un post.
      * Compatible con Server Actions y Webhooks.
      */
-    async smartQueuePublish(note: { id: string, title: string, summary: string | null, slug: string }) {
+    async smartQueuePublish(note: { id: string, title: string, summary: string | null, slug: string }, options?: { videoUrl?: string }) {
         // 1. Fetch full note to get Author Slug (Critical for direct URL)
         const fullNote = await prisma.pressNote.findUnique({
             where: { id: note.id },
@@ -142,8 +142,12 @@ export const FacebookService = {
         }
 
         // 3. Call Service
-        const res = await this.publishPost(message, publicUrl, {
-            scheduled_publish_time: isScheduled ? Math.floor(scheduledTime.getTime() / 1000) : undefined
+        // If sending video, append link to message because video posts don't have separate link field
+        const finalMessage = options?.videoUrl ? `${message}\n\n📲 Ver más: ${publicUrl}` : message;
+
+        const res = await this.publishPost(finalMessage, publicUrl, {
+            scheduled_publish_time: isScheduled ? Math.floor(scheduledTime.getTime() / 1000) : undefined,
+            videoUrl: options?.videoUrl
         })
 
         if (res.error) {
@@ -167,14 +171,15 @@ export const FacebookService = {
     },
 
     /**
-     * Publica un post en la Fanpage configurada via Graph API.
+     * Publica un post o video en la Fanpage configurada via Graph API.
      * @param message Texto del post (obligatorio)
      * @param link Enlace opcional (ej: url de la nota)
+     * @param options Opciones extras (videoUrl, scheduling, override page)
      */
-    async publishPost(message: string, link?: string, options?: { scheduled_publish_time?: number, pageIdOverride?: string }) {
+    async publishPost(message: string, link?: string, options?: { scheduled_publish_time?: number, pageIdOverride?: string, videoUrl?: string }) {
         const pageId = options?.pageIdOverride || process.env.FB_PAGE_ID
-
         let accessToken = process.env.FB_PAGE_ACCESS_TOKEN
+
         // [CRITICAL] If target is Secondary Page, use Secondary Token
         if (options?.pageIdOverride === SECONDARY_PAGE_ID) {
             accessToken = process.env.FB_SECONDARY_PAGE_ACCESS_TOKEN || accessToken
@@ -185,34 +190,41 @@ export const FacebookService = {
             return { error: "Credenciales faltantes" }
         }
 
-        const url = `https://graph.facebook.com/v22.0/${pageId}/feed`
+        // DYNAMICS: Switch endpoint if Video
+        const isVideo = !!options?.videoUrl;
+        const endpoint = isVideo ? 'videos' : 'feed';
+        const url = `https://graph.facebook.com/v22.0/${pageId}/${endpoint}`
 
-        // Default payload
-        const payload: FacebookPostData = {
-            message: message,
-            published: true, // Default to immediate publish
+        console.log(`📡 FB Publishing to /${endpoint}...`);
+
+        // Common Payload
+        const payload: any = {
+            access_token: accessToken,
+            published: true,
         }
 
-        // If scheduling is requested
+        // Scheduling
         if (options?.scheduled_publish_time) {
-            payload.published = false // Must be false for scheduled posts
+            payload.published = false
             payload.scheduled_publish_time = options.scheduled_publish_time
         }
 
-        if (link) {
-            payload.link = link
+        if (isVideo) {
+            // Video Payload
+            // Use 'description' for video text
+            payload.description = message;
+            payload.file_url = options!.videoUrl;
+        } else {
+            // Text/Link Payload
+            payload.message = message;
+            if (link) payload.link = link;
         }
 
         try {
             const response = await fetch(url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    ...payload,
-                    access_token: accessToken,
-                }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             })
 
             const data = await response.json()
@@ -222,7 +234,7 @@ export const FacebookService = {
                 return { error: data.error?.message || "Error desconocido de Facebook API" }
             }
 
-            console.log("✅ FacebookService: Post publicado exitosamente", data.id)
+            console.log("✅ FacebookService: Publicado exitosamente", data.id)
             return { success: true, postId: data.id }
 
         } catch (error) {

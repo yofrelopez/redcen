@@ -39,7 +39,6 @@
   "exclude": [
     "node_modules",
     "_BACKUP",
-    "scripts/local",
-    "scripts/audio-news-worker"
+    "scripts/local"
   ]
 }

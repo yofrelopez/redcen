@@ -8,6 +8,7 @@ export interface NewsItem {
     url: string;
     institution: string; // New field
     date: Date;
+    imageUrl?: string | null;
 }
 
 export async function getTopNews(): Promise<NewsItem[]> {
@@ -28,6 +29,7 @@ export async function getTopNews(): Promise<NewsItem[]> {
         const freshQuery = `
             SELECT 
                 p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
+                p."mainImage", p."ogImage",
                 u.name as "institutionName"
             FROM "PressNote" p
             JOIN "User" u ON p."authorId" = u.id
@@ -56,6 +58,7 @@ export async function getTopNews(): Promise<NewsItem[]> {
             const backfillQuery = `
                 SELECT 
                     p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
+                    p."mainImage", p."ogImage",
                     u.name as "institutionName"
                 FROM "PressNote" p
                 JOIN "User" u ON p."authorId" = u.id
@@ -94,6 +97,7 @@ function mapRowsToNewsItems(rows: any[]): NewsItem[] {
         content: row.content,
         url: `https://redcen.com/nota/${row.slug}`,
         institution: row.institutionName || 'Redacción Central',
-        date: new Date(row.createdAt)
+        date: new Date(row.createdAt),
+        imageUrl: row.mainImage || row.ogImage || null // Prefer mainImage
     }));
 }

@@ -16,24 +16,31 @@ const S3 = new S3Client({
     },
 });
 
-export async function uploadAudio(filePath: string): Promise<string> {
+export async function uploadFile(filePath: string, folder: string = 'daily-briefs'): Promise<string> {
     const fileName = path.basename(filePath);
     const fileStream = fs.createReadStream(filePath);
+    const ext = path.extname(filePath).toLowerCase();
 
-    console.log(`☁️ Uploading ${fileName} to R2...`);
+    let contentType = 'application/octet-stream';
+    if (ext === '.mp3') contentType = 'audio/mpeg';
+    else if (ext === '.mp4') contentType = 'video/mp4';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.png') contentType = 'image/png';
+
+    console.log(`☁️ Uploading ${fileName} (${contentType}) to R2...`);
 
     try {
         await S3.send(new PutObjectCommand({
             Bucket: R2_BUCKET_NAME,
-            Key: `daily-briefs/${fileName}`,
+            Key: `${folder}/${fileName}`,
             Body: fileStream,
-            ContentType: 'audio/mpeg',
-            ACL: 'public-read', // Or handle via bucket policy
+            ContentType: contentType,
+            ACL: 'public-read',
         }));
 
         const publicUrl = process.env.R2_PUBLIC_DOMAIN
-            ? `${process.env.R2_PUBLIC_DOMAIN}/daily-briefs/${fileName}`
-            : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET_NAME}/daily-briefs/${fileName}`; // Fallback, usually strictly auth'd
+            ? `${process.env.R2_PUBLIC_DOMAIN}/${folder}/${fileName}`
+            : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET_NAME}/${folder}/${fileName}`;
 
         console.log('✅ Upload successful:', publicUrl);
         return publicUrl;
