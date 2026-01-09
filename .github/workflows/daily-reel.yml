@@ -15,7 +15,7 @@ jobs:
   generate-and-publish:
     name: Generate & Publish Reel
     runs-on: ubuntu-latest
-    timeout-minutes: 20 # Give enough time for rendering inside the worker
+    timeout-minutes: 60 # Increased to allow slow/safe render (Concurrency 4)enough time for rendering inside the worker
 
     steps:
       - name: Checkout Code

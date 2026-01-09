@@ -2,7 +2,7 @@
 // Lightweight Facebook Client for Worker
 // Avoids dependencies on Prisma, Next.js, or local utils.
 
-const FB_API_VERSION = 'v22.0';
+const FB_API_VERSION = 'v19.0';
 
 interface PublishOptions {
     videoUrl?: string;
@@ -15,13 +15,16 @@ export const FacebookClient = {
         }
 
         const endpoint = 'videos';
-        const url = `https://graph.facebook.com/${FB_API_VERSION}/${pageId}/${endpoint}`;
+        // Use graph-video for video uploads as per stricter documentation
+        const url = `https://graph-video.facebook.com/${FB_API_VERSION}/${pageId}/${endpoint}`;
 
         const payload = {
             access_token: accessToken,
             published: true,
             description: message,
-            file_url: videoUrl
+            file_url: videoUrl,
+            // 'title' is optional but good for long-form videos
+            title: message.split('\n')[0].substring(0, 50) + '...'
         };
 
         try {
