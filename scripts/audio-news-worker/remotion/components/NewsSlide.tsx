@@ -10,13 +10,16 @@ interface Props {
 export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) => {
     const frame = useCurrentFrame();
 
-    // Ken Burns Effect (Slow Zoom out)
-    const scale = interpolate(
+    // 1. Dynamic Background Zoom (Flow effect)
+    const scaleBg = interpolate(
         frame,
         [0, durationInFrames],
-        [1.1, 1], // Zoom out from 1.1x to 1x
+        [1.35, 1], // Strong movement (35%)
         { extrapolateRight: 'clamp' }
     );
+
+    // 2. Static Foreground (Solid)
+    const scaleFg = 1;
 
     return (
         <div style={{
@@ -41,8 +44,8 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
                     width: '120%',
                     height: '120%',
                     objectFit: 'cover',
-                    transform: `scale(${scale})`, // Sync movement
-                    filter: 'blur(30px) brightness(0.5) saturation(1.2)', // Atmos effect
+                    transform: `scale(${scaleBg})`, // Dynamic
+                    filter: 'blur(20px) brightness(0.6) saturate(1.2)', // CORRECTED SYNTAX + VISIBLE TEXTURE
                     zIndex: 0
                 }}
             />
@@ -50,20 +53,27 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
             {/* 2. Foreground Image (Constrained with Margins) */}
             <div style={{
                 position: 'relative',
-                width: '90%',
-                height: '85%',
+                width: '85%', // More "air" on sides (was 90%)
+                height: '50%', // Reduce height to favor horizontal aspect ratios in vertical frame? 
+                // No, keep it flexible but "contained". 
+                // If I constrain height too much, vertical images suffer.
+                // Better to keep height generous (e.g. 70%) and let objectFit: contain handle it.
+                aspectRatio: 'auto', // Allow natural shape within constraints
+                maxHeight: '70%',
                 marginTop: '150px', // Push down below header
                 zIndex: 1,
                 boxShadow: '0 20px 50px rgba(0,0,0,0.8)', // Deep shadow
                 borderRadius: '20px',
+                // Optional: distinctive background for the "card" if transparent areas appear
+                backgroundColor: 'rgba(0,0,0,0.2)',
             }}>
                 <Img
                     src={image}
                     style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
-                        transform: `scale(${scale})`,
+                        objectFit: 'contain', // SHOW FULL IMAGE (No cropping)
+                        transform: `scale(${scaleFg})`, // Static
                         borderRadius: '20px',
                     }}
                 />
