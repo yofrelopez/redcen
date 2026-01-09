@@ -69,3 +69,13 @@ google.json
 
 # AI Agent
 .agent/
+
+# Audio/Video Worker Artifacts
+scripts/audio-news-worker/output/
+scripts/audio-news-worker/temp/
+public/temp_reels/
+*.mp4
+*.mp3
+*.wav
+scripts/audio-news-worker/debug-*.ts
+scripts/audio-news-worker/test-*.ts
