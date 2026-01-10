@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 import { NewsItem } from './news-selector';
 
-export async function generateScript(news: NewsItem[]): Promise<string> {
+export async function generateScript(news: NewsItem[], mode: 'weekly' | 'reel' = 'weekly'): Promise<string> {
     const groq = new Groq({
         apiKey: process.env.GROQ_API_KEY,
     });
@@ -24,7 +24,40 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
         }))
     });
 
-    const systemPrompt = `
+    let systemPrompt = '';
+
+    if (mode === 'reel') {
+        systemPrompt = `
+    Actúa como un experto en guiones virales para TikTok/Reels de 'Redacción Central'.
+    Tu tarea es escribir un GUION SÚPER RÁPIDO Y DIRECTO (ALEJANDRA y JAIME).
+
+    OBJETIVO DE TIEMPO: El guion TOTAL debe durar ENTRE 50 Y 60 SEGUNDOS.
+    ESTA ES LA REGLA: NO RESUMAS TANTO QUE PIERDA SENTIDO. DA CONTEXTO.
+
+    FORMATO DE SALIDA (Estricto):
+    [ALEJANDRA]: ...
+    [JAIME]: ...
+
+    ESTRUCTURA OBLIGATORIA:
+    1. ARRANQUE INMEDIATO (HOOK VIOLENTO):
+       - Empieza DIRECTAMENTE con la noticia más fuerte.
+       - NO digas "Hola", "Bienvenidos", ni fecha.
+       - Usa la etiqueta: [IMAGEN: 0] INMEDIATAMENTE al inicio.
+    
+    2. DESARROLLO (Mínimo 3 intercambios):
+       - Explica el "Por qué" y el "Cómo", no solo el "Qué".
+       - Alterna entre [ALEJANDRA] y [JAIME] para dinamismo.
+       - Usa [IMAGEN: N] para cada noticia siguiente.
+       - Asegúrate que la narración fluya.
+
+    3. CIERRE (Max 5 seg):
+       - OBLIGATORIO: Termina con una PREGUNTA o LLAMADO A LA ACCIÓN.
+       - Ejemplo: "¿Y tú qué opinas? Comenta y visita redcen.com"
+       - O: "Para más detalles, entra a redcen.com. ¡Comparte!"
+    `;
+    } else {
+        // DEFAULT WEEKLY PROMPT
+        systemPrompt = `
     Actúa como el equipo de producción de 'Redacción Central' (Redcen), un noticiero radial líder en Perú.
     Tu tarea es escribir un GUION DE RADIO DOBLE (ALEJANDRA y JAIME) basado en noticias AGRUPADAS POR INSTITUCIÓN.
 
@@ -56,6 +89,7 @@ export async function generateScript(news: NewsItem[]): Promise<string> {
     4. TONO: Serio, profesional, pero dinámico y explicativo. 
     5. MARCADORES VISUALES: No olvides los tags [IMAGEN: N]. Son vitales para el video.
   `;
+    }
 
     try {
         const completion = await groq.chat.completions.create({

@@ -101,3 +101,57 @@ function mapRowsToNewsItems(rows: any[]): NewsItem[] {
         imageUrl: row.mainImage || row.ogImage || null // Prefer mainImage
     }));
 }
+
+export async function getNewsByLinks(links: string[]): Promise<NewsItem[]> {
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
+
+    try {
+        await client.connect();
+
+        // 1. Extract slugs from URLs
+        // Expected format: https://redcen.com/nota/my-slug OR just my-slug
+        const slugs = links.map(link => {
+            const parts = link.split('/');
+            return parts[parts.length - 1] || link;
+        }).filter(s => s.trim().length > 0);
+
+        if (slugs.length === 0) return [];
+
+        console.log(`🔍 Searching for manual slugs:`, slugs);
+
+        // 2. Query DB
+        const placeholders = slugs.map((_, i) => `$${i + 1}`).join(',');
+        const query = `
+            SELECT 
+                p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
+                p."mainImage", p."ogImage",
+                u.name as "institutionName"
+            FROM "PressNote" p
+            JOIN "User" u ON p."authorId" = u.id
+            WHERE p.slug IN (${placeholders})
+            AND p.published = true
+        `;
+
+        const res = await client.query(query, slugs);
+        const foundItems = mapRowsToNewsItems(res.rows);
+
+        // 3. Reorder to match input links (User curation is key)
+        const orderedItems: NewsItem[] = [];
+        slugs.forEach(slug => {
+            const item = foundItems.find(i => i.url.endsWith(slug));
+            if (item) orderedItems.push(item);
+        });
+
+        console.log(`✅ Found ${orderedItems.length} / ${slugs.length} manual news items.`);
+        return orderedItems;
+
+    } catch (err) {
+        console.error('Error fetching manual news:', err);
+        throw err;
+    } finally {
+        await client.end();
+    }
+}

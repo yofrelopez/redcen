@@ -19,10 +19,16 @@ if (ffprobeStatic && ffprobeStatic.path) {
     ffmpeg.setFfprobePath(ffprobeStatic.path);
 }
 
+export interface ProducerOptions {
+    skipIntro?: boolean;
+    skipOutro?: boolean;
+}
+
 export async function produceFinalAudio(
     audioSegments: AudioSegment[],
     assetsDir: string,
-    outputDir: string
+    outputDir: string,
+    options: ProducerOptions = {}
 ): Promise<string> {
     const introPath = path.join(assetsDir, 'intro.mp3');
     const outroPath = path.join(assetsDir, 'outro.mp3');
@@ -51,39 +57,57 @@ export async function produceFinalAudio(
     console.log('Production: Mixing final track...');
 
     return new Promise<string>((resolve, reject) => {
-        // We want: [Intro] -> [Speech] -> [Outro] combined sequence
-        // And [Background] looping and mixed under it.
-        // Simplifying: Just Sequence [Intro -> Speech -> Outro] mixed with [Background]
+        const command = ffmpeg();
+        let inputCount = 0;
 
-        // Complex filter:
-        // [0] = Intro, [1] = Speech, [2] = Outro --> Concat to [voice]
-        // [3] = Background -> Loop -> Volume 0.15 -> [music]
-        // [voice][music] -> amix -> [out]
+        // FILTER LOGIC BUILDER
+        // We need to build a dynamic complexFilter
+        // Main Stream Inputs:
+        // [0] Speech (Standardized always present)
+        // [1] Background (Standardized always present)
+        // Options: Intro, Outro
 
-        ffmpeg()
-            .input(introPath)
-            .input(tempSpeechPath)
-            .input(outroPath)
-            .input(backgroundPath)
-            // Loop background indefinitely (will cut to shortest stream duration later if needed, 
-            // but amix usually takes longest duration. We want duration of voice.)
-            .inputOptions(['-stream_loop -1'])
-            .complexFilter([
-                // Concat Intro(0) + ProcessedSpeech + Outro(2) = node [voice]
-                // "loudnorm": Professional broadcasting normalization (Single pass). 
-                // I=-14 (Youtube/Podcast standard loudness), TP=-1.0 (True Peak).
-                // This acts as a compressor/limiter to keep energy high and consistent.
-                '[1:a]loudnorm=I=-14:TP=-1.0:LRA=7[processed_speech]',
-                '[0:a][processed_speech][2:a]concat=n=3:v=0:a=1[voice]',
-                // Background(3) volume adjust = node [music]
-                // Increased to 0.45 (approx +10% bump) to ensure action is felt
-                '[3:a]volume=0.45[music]',
-                // Mix voice and music. 
-                // duration=first means stop when the first input (voice, because we put it first in filter?) 
-                // Actually amix doesn't have "first". 'shortest' input option might help.
-                // Let's use 'duration=shortest' in amix.
-                '[voice][music]amix=inputs=2:duration=first[out]'
-            ])
+        command.input(tempSpeechPath); // Input 0 (Speech)
+
+        let introIndex = -1;
+        if (!options.skipIntro) {
+            command.input(introPath);
+            introIndex = ++inputCount; // 1
+        }
+
+        let outroIndex = -1;
+        if (!options.skipOutro) {
+            command.input(outroPath);
+            outroIndex = ++inputCount; // 2 or 1
+        }
+
+        command.input(backgroundPath);
+        const bgIndex = ++inputCount; // Last input
+
+        // Loop background
+        command.inputOptions(['-stream_loop -1']);
+
+        const filterComplex: string[] = [];
+
+        // 1. Normalize Speech & Add Padding (3s tail)
+        filterComplex.push('[0:a]loudnorm=I=-14:TP=-1.0:LRA=7,apad=pad_dur=3[processed_speech]');
+
+        // 2. Concat Voice Track
+        const concatInputs: string[] = [];
+        if (!options.skipIntro) concatInputs.push(`[${introIndex}:a]`);
+        concatInputs.push('[processed_speech]');
+        if (!options.skipOutro) concatInputs.push(`[${outroIndex}:a]`);
+
+        filterComplex.push(`${concatInputs.join('')}concat=n=${concatInputs.length}:v=0:a=1[voice]`);
+
+        // 3. Background Volume (Boosted to 60% as requested)
+        filterComplex.push(`[${bgIndex}:a]volume=0.60[music]`);
+
+        // 4. Final Mix
+        filterComplex.push('[voice][music]amix=inputs=2:duration=first[out]');
+
+        command
+            .complexFilter(filterComplex)
             .map('[out]')
             .output(finalPath)
             .on('error', (err) => {

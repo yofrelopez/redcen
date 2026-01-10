@@ -42,28 +42,63 @@ async function main() {
     console.log(`📅 Date: ${new Date().toISOString()}`);
 
     try {
+
         if (!process.env.INGEST_URL) {
             console.warn("⚠️ Warning: INGEST_URL not set. OG generation might fallback to localhost or fail.");
         }
 
+        // --- ARGUMENT PARSING ---
+        const isReelMode = process.argv.includes('--mode=reel');
+        const linksArg = process.argv.find(arg => arg.startsWith('--links='));
+        let links: string[] = [];
+
+        if (linksArg) {
+            const rawLinks = linksArg.split('=')[1];
+            // Remove quotes if present
+            const cleanLinks = rawLinks.replace(/^['"]|['"]$/g, '');
+            links = cleanLinks.split(',').map(l => l.trim()).filter(l => l.length > 0);
+        }
+
+        console.log(`🤖 ROBOT MODE: ${isReelMode ? '🔥 REEL (VIRAL)' : '🎙️ WEEKLY (PODCAST)'}`);
+
         // 1. Fetch News
         logHeader('📰 STEP 1: FETCHING NEWS');
-        let news = await getTopNews();
+        let news: any[] = [];
+
+        if (isReelMode && links.length > 0) {
+            // Manual Mode
+            // Lazy import to avoid circular dependency issues if any
+            const { getNewsByLinks } = await import('./lib/news-selector');
+            console.log(`🔗 Manual Links Provided: ${links.length}`);
+            news = await getNewsByLinks(links);
+        } else {
+            // Automatic Mode
+            news = await getTopNews();
+        }
+
         if (news.length === 0) {
             console.log('❌ No news found.');
             return;
         }
 
-        // --- TEST MODE: LIMIT TO 3 ITEMS ---
-        // console.log('⚠️ TEST MODE: Limiting to top 3 news items for fast video generation.');
-        // news = news.slice(0, 3);
+        // --- TEST MODE: LIMIT TO 3 ITEMS (ONLY FOR WEEKLY AUTOMATIC TO SAVE TOKENS) ---
+        if (!isReelMode && news.length > 15) {
+            console.log('⚠️ Limiting automatic fetch to top 15.');
+            news = news.slice(0, 15);
+        }
+
+        // --- REEL MODE: STRICT LIMIT TO 3 ITEMS (QUALITY OVER QUANTITY) ---
+        if (isReelMode && news.length > 3) {
+            console.log('✂️  Reel Mode: Limiting to Top 3 News for better narration depth.');
+            news = news.slice(0, 3);
+        }
         // -----------------------------------
 
         console.log(`🔹 Found ${news.length} news items.`);
 
         // 2. Write Script
         logHeader('📝 STEP 2: GENERATING SCRIPT');
-        const script = await generateScript(news);
+        const script = await generateScript(news, isReelMode ? 'reel' : 'weekly');
         console.log('📝 Script Preview:\n', script.substring(0, 300) + '...\n');
         // console.log('DEBUG: Script generated. Moving to next step.');
 
@@ -89,7 +124,14 @@ async function main() {
             console.warn('⚠️ Intro asset missing. Using first segment as fallback.');
         }
 
-        const finalAudioPath = await produceFinalAudio(audioSegments, assetsDir, outputDir);
+        // IMPORTANT: In REEL mode, we technically don't need a massive final mix for the podcast, 
+        // but the system expects it. We will produce it anyway.
+        const finalAudioPath = await produceFinalAudio(
+            audioSegments,
+            assetsDir,
+            outputDir,
+            { skipIntro: isReelMode, skipOutro: isReelMode }
+        );
         console.log('✅ Final Audio Ready:', finalAudioPath);
 
         // 5. Generate Video Reel (NEW STEP)
@@ -128,9 +170,12 @@ async function main() {
             // FIX: Inject "Intro Segment" to align video with audio
             const introPath = path.join(assetsDir, 'intro.mp3');
             let introDuration = 0;
-            if (fs.existsSync(introPath)) {
+            // ONLY MEASURE INTRO IF NOT REEL MODE
+            if (!isReelMode && fs.existsSync(introPath)) {
                 introDuration = await getAudioDuration(introPath);
                 console.log(`⏱️ Intro Duration detected: ${introDuration}s`);
+            } else if (isReelMode) {
+                console.log(`⏩ REEL MODE: Skipping Intro Duration.`);
             }
 
             // INTRO IMAGE handling
@@ -146,6 +191,11 @@ async function main() {
             // Simplified: Use the first news image as intro background if specific cover not generated.
 
             // REMOTION AUDIO: Must copy final audio to public
+            // NOTE: produceFinalAudio always adds intro music in the current implementation of producer.ts?
+            // If producer.ts adds intro music hardcoded, we might have music in Reel mode.
+            // Ideally we should fix producer.ts too, OR we just trust that audioSegments are what matters for the video SYNC.
+            // For video sync, we inject "virtual_intro" to offset the images. 
+
             const audioFileName = `daily_mix_${Date.now()}.mp3`;
             const publicAudioPath = path.join(publicTempDir, audioFileName);
             fs.copyFileSync(finalAudioPath, publicAudioPath);
@@ -160,18 +210,28 @@ async function main() {
             }
 
             // Update Segments Logic to shift indices
-            // 4. Prepend Virtual Intro Segment & Outro
-            audioSegments.forEach(seg => {
-                if (seg.imageIndex !== undefined) seg.imageIndex += 1;
-            });
+            // 4. Prepend Virtual Intro Segment & Outro (ONLY IF NOT REEL MODE)
+            if (!isReelMode) {
+                audioSegments.forEach(seg => {
+                    if (seg.imageIndex !== undefined) seg.imageIndex += 1;
+                });
+            }
 
-            audioSegments.unshift({
-                filePath: 'virtual_intro',
-                duration: introDuration,
-                imageIndex: 0
-            });
+            // LOGIC SPLIT FOR REEL
+            if (!isReelMode) {
+                // WEEKLY MODE: INSERT INTRO
+                audioSegments.unshift({
+                    filePath: 'virtual_intro',
+                    duration: introDuration,
+                    imageIndex: 0
+                });
+            } else {
 
-            if (outroDuration > 0) {
+                // REEL MODE: NO VIRTUAL INTRO SHIFT
+                console.log(`⏩ REEL MODE: Skipping Virtual Intro Injection.`);
+            }
+
+            if (outroDuration > 0 && !isReelMode) {
                 audioSegments.push({
                     filePath: 'virtual_outro',
                     duration: outroDuration,
@@ -181,10 +241,18 @@ async function main() {
 
             // Prepare Remotion Image Array
             // [0] = Intro, [1..N] = News
-            // We need an Intro Image at index 0. 
-            // Let's use the first available news image or a placeholder
-            const firstValidNewsImg = remotionImagePaths.find(p => p !== '') || '/images/logo_claro_2.png';
-            const finalRemotionImages = [firstValidNewsImg, ...remotionImagePaths];
+            // We need an Intro Image at index 0 ONLY for Weekly Mode.
+
+            let finalRemotionImages: string[] = [];
+
+            if (!isReelMode) {
+                // Let's use the first available news image or a placeholder for Intro
+                const firstValidNewsImg = remotionImagePaths.find(p => p !== '') || '/images/logo_claro_2.png';
+                finalRemotionImages = [firstValidNewsImg, ...remotionImagePaths];
+            } else {
+                // REEL MODE: Direct Mapping [0] -> News 1
+                finalRemotionImages = [...remotionImagePaths];
+            }
 
 
             const videoPath = path.join(outputDir, `daily_reel_DEBUG_FINAL.mp4`);
@@ -197,14 +265,19 @@ async function main() {
                 mixedAudioPath: remotionAudioUrl, // /temp_reels/audio.mp3
                 outputpath: videoPath,
                 assetsDir,
-                news
+                news,
+                isReelMode // NEW FLAG
             });
             console.log('✅ Video Generated:', videoPath);
 
             // 5.3 Upload Video
-            console.log('☁️ Uploading Video...');
-            videoUrl = await uploadFile(videoPath, 'daily-reels');
-            console.log('🚀 Reel URL:', videoUrl);
+            if (!process.argv.includes('--video-preview')) {
+                console.log('☁️ Uploading Video...');
+                videoUrl = await uploadFile(videoPath, 'daily-reels');
+                console.log('🚀 Reel URL:', videoUrl);
+            } else {
+                console.log('☁️ Video Upload SKIPPED (Preview Mode). File at:', videoPath);
+            }
 
         } catch (vErr) {
             console.error('❌ Video generation failed:', vErr);
@@ -243,9 +316,26 @@ async function main() {
         // 9. Trigger Facebook Share DIRECTLY
         logHeader('📡 STEP 9: FACEBOOK VIDEO UPLOAD');
 
+        // 9. Trigger Facebook Share DIRECTLY
+        logHeader('📡 STEP 9: FACEBOOK VIDEO UPLOAD');
+
         const dateStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const title = `Redacción Central Al Día - ${dateStr}`;
-        const summary = "Lo que debes saber hoy en nuestra región y el país.";
+
+        let title = '';
+        let summary = '';
+        let hashtags = '';
+
+        if (isReelMode) {
+            title = `⚡ Las fijas de hoy - ${dateStr}`;
+            // Create a bullet list of headlines
+            const lines = news.map(n => `▪️ ${n.title}`);
+            summary = lines.join('\n') + "\n\n🚀 Resumen al paso. Síguenos para más.";
+            hashtags = "#NoticiasRapidas #ReelsPerú #Redcen #Actualidad";
+        } else {
+            title = `Redacción Central Al Día - ${dateStr}`;
+            summary = "Lo que debes saber hoy en nuestra región y el país.";
+            hashtags = "#Redcen #Noticias #ResumenDiario";
+        }
 
         try {
             // Lazy import to ensure environment is fully loaded
@@ -258,7 +348,7 @@ async function main() {
             console.log('🚀 Uploading Video to Facebook Fanpage (ID: ' + pageId + ')...');
 
             const fbResult = await FacebookClient.publishVideo(
-                `${title}\n\n${summary}\n\n#Redcen #Noticias #ResumenDiario`,
+                `${title}\n\n${summary}\n\n${hashtags}`,
                 videoUrl!,
                 pageId,
                 token

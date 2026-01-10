@@ -5,6 +5,7 @@
     "main": "index.ts",
     "scripts": {
         "start": "tsx index.ts",
+        "start:reel": "tsx index.ts --mode=reel",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [],
