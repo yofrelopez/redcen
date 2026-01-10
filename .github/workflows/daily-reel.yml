@@ -6,16 +6,18 @@ on:
     # 05:00 AM Lima = 10:00 UTC
     # 01:00 PM Lima = 18:00 UTC
     - cron: '0 10,18 * * *'
-  workflow_dispatch: # Allow manual trigger
-  push:
-    branches:
-      - 'feature/audio-video-reels'
+  workflow_dispatch: 
+    inputs:
+      links:
+        description: 'Manual News URLs (comma separated)'
+        required: false
+        type: string
 
 jobs:
   generate-and-publish:
     name: Generate & Publish Reel
     runs-on: ubuntu-latest
-    timeout-minutes: 60 # Increased to allow slow/safe render (Concurrency 4)enough time for rendering inside the worker
+    timeout-minutes: 60 
 
     steps:
       - name: Checkout Code
@@ -65,4 +67,10 @@ jobs:
           # Application
           SITE_URL: "https://redcen.com"
           
-        run: npm start
+        # Run in REEL mode. Pass links if provided manually.
+        run: |
+          if [ "${{ github.event.inputs.links }}" != "" ]; then
+            npm run start:reel -- --links="${{ github.event.inputs.links }}"
+          else
+            npm run start:reel
+          fi
