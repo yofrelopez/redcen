@@ -1,11 +1,11 @@
 name: Daily Audio News
 
 on:
-  schedule:
-    # 6:00 AM Tarija (GMT-4) = 10:00 AM UTC
-    # DISABLED BY USER REQUEST (2025-01-10) - Focus on Reels for now
-    # - cron: '0 10 * * *' # 5:00 AM PE (Morning)
-    # - cron: '0 18 * * *' # 1:00 PM PE (Afternoon)
+# schedule:
+  #   # 6:00 AM Tarija (GMT-4) = 10:00 AM UTC
+  #   # DISABLED BY USER REQUEST (2025-01-10) - Focus on Reels for now
+  #   # - cron: '0 10 * * *' # 5:00 AM PE (Morning)
+  #   # - cron: '0 18 * * *' # 1:00 PM PE (Afternoon)
   workflow_dispatch: # Allow manual trigger
 
 jobs:
