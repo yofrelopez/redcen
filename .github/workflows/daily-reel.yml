@@ -12,16 +12,11 @@ on:
         description: 'Manual News URLs (comma separated)'
         required: false
         type: string
-  # TRIGGER FOR TESTING ON BRANCH (Only runs if commit msg has [RUN REEL])
-  push:
-    branches:
-      - 'feature/audio-video-reels'
 
 jobs:
   generate-and-publish:
     name: Generate & Publish Reel
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, '[RUN REEL]') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'"
     timeout-minutes: 60 
 
     steps:
