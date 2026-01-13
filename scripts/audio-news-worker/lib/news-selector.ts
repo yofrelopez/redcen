@@ -6,9 +6,10 @@ export interface NewsItem {
     summary: string;
     content: string;
     url: string;
-    institution: string; // New field
+    institution: string;
     date: Date;
     imageUrl?: string | null;
+    gallery?: string[]; // NEW FIELD (Step 1)
 }
 
 export async function getTopNews(): Promise<NewsItem[]> {
@@ -29,7 +30,7 @@ export async function getTopNews(): Promise<NewsItem[]> {
         const freshQuery = `
             SELECT 
                 p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
-                p."mainImage", p."ogImage",
+                p."mainImage", p."ogImage", p.gallery, -- Added gallery (Step 1)
                 u.name as "institutionName"
             FROM "PressNote" p
             JOIN "User" u ON p."authorId" = u.id
@@ -58,7 +59,7 @@ export async function getTopNews(): Promise<NewsItem[]> {
             const backfillQuery = `
                 SELECT 
                     p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
-                    p."mainImage", p."ogImage",
+                    p."mainImage", p."ogImage", p.gallery, -- Added gallery (Step 1)
                     u.name as "institutionName"
                 FROM "PressNote" p
                 JOIN "User" u ON p."authorId" = u.id
@@ -98,7 +99,8 @@ function mapRowsToNewsItems(rows: any[]): NewsItem[] {
         url: `https://redcen.com/nota/${row.slug}`,
         institution: row.institutionName || 'Redacción Central',
         date: new Date(row.createdAt),
-        imageUrl: row.mainImage || row.ogImage || null // Prefer mainImage
+        imageUrl: row.mainImage || row.ogImage || null, // Prefer mainImage
+        gallery: row.gallery || [] // SAFELY Map gallery (Step 1)
     }));
 }
 
@@ -128,7 +130,7 @@ export async function getNewsByLinks(links: string[]): Promise<NewsItem[]> {
         const query = `
             SELECT 
                 p.id, p.title, p.summary, p.content, p.slug, p."createdAt",
-                p."mainImage", p."ogImage",
+                p."mainImage", p."ogImage", p.gallery, -- Added gallery (Step 1)
                 u.name as "institutionName"
             FROM "PressNote" p
             JOIN "User" u ON p."authorId" = u.id

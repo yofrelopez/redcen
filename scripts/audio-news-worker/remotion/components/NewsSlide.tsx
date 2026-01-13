@@ -5,20 +5,55 @@ interface Props {
     image: string;
     title?: string;
     durationInFrames: number;
+    gallery?: string[];
 }
 
-export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) => {
+export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames, gallery }) => {
     const frame = useCurrentFrame();
+
+    // --- GALLERY LOGIC START ---
+    // 1. Prepare Slide List (Main Image + Gallery, max 5 total)
+    // Filter out potential nulls/duplicates just in case
+    const allImages = [image, ...(gallery || [])].filter(Boolean);
+    const uniqueImages = Array.from(new Set(allImages)).slice(0, 5);
+
+    // 2. Determine Duration Logic
+    const fps = 30;
+    const MIN_DURATION_PER_SLIDE_SEC = 2.5;
+    const MIN_FRAMES_PER_SLIDE = MIN_DURATION_PER_SLIDE_SEC * fps;
+
+    let slidesToShow = uniqueImages;
+    const maxPossibleSlides = Math.floor(durationInFrames / MIN_FRAMES_PER_SLIDE);
+
+    if (maxPossibleSlides < uniqueImages.length && maxPossibleSlides > 0) {
+        // Not enough time for all images -> Truncate list
+        slidesToShow = uniqueImages.slice(0, maxPossibleSlides);
+    } else if (maxPossibleSlides <= 0) {
+        // Extremely short -> Show only main image
+        slidesToShow = [image];
+    }
+
+    // 3. Calculate Active Slide
+    // Avoid division by zero
+    const slideDuration = slidesToShow.length > 0
+        ? durationInFrames / slidesToShow.length
+        : durationInFrames;
+
+    const currentSlideIndex = Math.floor(frame / slideDuration);
+    const safeIndex = Math.min(Math.max(currentSlideIndex, 0), slidesToShow.length - 1);
+
+    const currentImage = slidesToShow[safeIndex] || image; // Fallback
+    // --- GALLERY LOGIC END ---
 
     // 1. Dynamic Background Zoom (Flow effect)
     const scaleBg = interpolate(
         frame,
         [0, durationInFrames],
-        [1.35, 1], // Strong movement (35%)
+        [1.35, 1],
         { extrapolateRight: 'clamp' }
     );
 
-    // 2. Static Foreground (Solid)
+    // 2. Static Foreground
     const scaleFg = 1;
 
     return (
@@ -29,48 +64,47 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
             width: '100%',
             height: '100%',
             overflow: 'hidden',
-            backgroundColor: '#000', // Deep base
-            display: 'flex', // RESTORED
-            alignItems: 'center', // RESTORED
-            justifyContent: 'center' // RESTORED
+            backgroundColor: '#000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
         }}>
             {/* 1. Blurred Background Layer (Fill Screen) */}
             <Img
-                src={image}
+                src={currentImage} // DYNAMIC
                 style={{
                     position: 'absolute',
-                    top: '-10%', // Overscan for blur
+                    top: '-10%',
                     left: '-10%',
                     width: '120%',
                     height: '120%',
                     objectFit: 'cover',
-                    transform: `scale(${scaleBg})`, // Dynamic
-                    filter: 'blur(20px) brightness(0.6) saturate(1.2)', // CORRECTED SYNTAX + VISIBLE TEXTURE
+                    transform: `scale(${scaleBg})`,
+                    filter: 'blur(20px) brightness(0.6) saturate(1.2)',
                     zIndex: 0
                 }}
             />
 
             {/* 2. Foreground Image (Constrained with Margins) */}
             <div style={{
-                position: 'relative', // RESTORED
+                position: 'relative',
                 width: '85%',
-                height: '50%', // ORIGINAL
-                // Remotion/CSS Logic: marginTop in a centered flex container PUSHES content down from center.
-                // User requested 190px explicitly to lower it.
+                height: '50%',
+                // User requested 190px explicitly
                 marginTop: '190px',
                 zIndex: 1,
-                boxShadow: '0 20px 50px rgba(0,0,0,0.8)', // Deep shadow
+                boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
                 borderRadius: '20px',
                 backgroundColor: 'rgba(0,0,0,0.2)',
             }}>
                 <Img
-                    src={image}
+                    src={currentImage} // DYNAMIC
                     style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain', // SHOW FULL IMAGE
-                        objectPosition: 'top', // ALIGN TO TOP
-                        transform: `scale(${scaleFg})`, // Static
+                        objectFit: 'contain',
+                        objectPosition: 'top',
+                        transform: `scale(${scaleFg})`,
                         borderRadius: '20px',
                     }}
                 />

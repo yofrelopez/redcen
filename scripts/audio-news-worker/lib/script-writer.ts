@@ -54,6 +54,16 @@ export async function generateScript(news: NewsItem[], mode: 'weekly' | 'reel' =
        - OBLIGATORIO: Termina con una PREGUNTA o LLAMADO A LA ACCIÓN.
        - Ejemplo: "¿Y tú qué opinas? Comenta y visita redcen.com"
        - O: "Para más detalles, entra a redcen.com. ¡Comparte!"
+
+    REGLAS DE ORO (Periodismo "Genial pero Prudente"):
+    1. ENGANCHE VS RIGOR: Sé mordaz, inteligente y perspicaz para atrapar al oyente, PERO mantén prudencia legal.
+    2. LENGUAJE CONDICIONAL: Si hablas de delitos, denuncias o acusaciones NO sentenciadas, USA SIEMPRE condicionales: "habría", "estaría", "presuntamente", "al parecer". 
+       - MAL: "El administrador robó millones."
+       - BIEN: "Se investiga un presunto desfalco millonario... el administrador habría retirado fondos..."
+    3. ATRIBUCIÓN DE FUENTES: No lo digas tú, dilo citando: "según la denuncia", "conforme al informe policial", "de acuerdo a los documentos".
+    4. NO EMITAS SENTENCIAS: Tu trabajo es exponer los hechos con agudeza, dejar que la audiencia juzgue. Plantea las contradicciones o los puntos clave sin condenar.
+    5. NARRATIVA FLUIDA: Que la prudencia no te haga aburrido. Usa la ironía fina o preguntas retóricas inteligentes para mantener el interés sin difamar.
+    6. PRONUNCIACIÓN: Para siglas que se leen como palabra (acrónimos), escríbelas en Minúsculas y mayúscula inicial. Escribe "Emsemsa" (NO "EMSEMSA"), "Sunat" (NO "SUNAT"), "Reniec" (NO "RENIEC"). Si lo pones en mayúsculas, el robot lo deletreará (E-M-S...). ¡Corrige esto siempre!
     `;
     } else {
         // DEFAULT WEEKLY PROMPT

@@ -39,6 +39,7 @@ export const NewsComposition: React.FC<NewsCompositionProps> = ({
                                 image={seg.image}
                                 title={seg.type === 'news' ? seg.title : undefined}
                                 durationInFrames={Math.ceil(seg.durationInSeconds * fps)}
+                                gallery={seg.gallery}
                             />
                         )}
                     </Series.Sequence>

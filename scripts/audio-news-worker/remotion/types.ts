@@ -5,6 +5,7 @@ export const segmentSchema = z.object({
     title: z.string(),
     durationInSeconds: z.number(),
     type: z.enum(['intro', 'news', 'outro']),
+    gallery: z.array(z.string()).optional(), // NEW FIELD (Step 2)
 });
 
 export const newsCompositionSchema = z.object({

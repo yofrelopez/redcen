@@ -112,47 +112,26 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
         const logoHttpUrl = toHttpUrl(logoPathRel);
 
         // 3. Prepare Segments
-        let rawSegments: Array<{ type: 'intro' | 'outro' | 'news'; image: string; title?: string; duration: number }> = [];
+        let rawSegments: Array<{
+            type: 'intro' | 'outro' | 'news';
+            image: string;
+            title?: string;
+            duration: number;
+            gallery?: string[]; // NEW FIELD definition
+        }> = [];
 
         // Initial State
         // If Reel Mode, start as 'news' to avoid Intro Flash
-        let currentState = {
+        let currentState: {
+            type: 'intro' | 'outro' | 'news';
+            image: string;
+            title?: string;
+            gallery?: string[];
+        } = {
             type: (isReelMode ? 'news' : 'intro') as 'intro' | 'outro' | 'news',
             image: isReelMode ? (newsImages[0] ? toHttpUrl(newsImages[0]) : logoHttpUrl) : logoHttpUrl,
             title: ''
         };
-
-        for (const seg of audioSegments) {
-            // Check if this segment dictates a specific change
-            if (seg.imageIndex === 0) {
-                if (isReelMode) {
-                    // REEL MODE: Index 0 is just the first news item
-                    // Logic falls through to standard "News Item" handler below
-                } else {
-                    // WEEKLY MODE: Index 0 is Intro
-                    currentState = { type: 'intro', image: logoHttpUrl, title: '' };
-                }
-            }
-
-            if (seg.imageIndex === -99) {
-                currentState = { type: 'outro', image: logoHttpUrl, title: '' };
-            } else if (seg.imageIndex !== undefined) {
-                // ... existing news logic ...
-            }
-
-            // Re-eval strict news logic for Index 0 in Reel Mode
-            if (isReelMode && seg.imageIndex === 0) {
-                // Force logic to treat it as news item 0
-                const newsItem = news[0];
-                // ... duplicate/refactor logic or allow fallthrough? 
-                // The easiest way is to let the "else if (seg.imageIndex !== undefined)" block handle it.
-                // But wait, "else if" implies mutual exclusion with "if (seg.imageIndex === 0)".
-                // So we must Change the IF structure.
-            }
-        }
-
-        // Initialize State
-        currentState = { type: 'intro', image: logoHttpUrl, title: '' };
 
         if (isReelMode) {
             // FIX 1: Initialize VISUALS immediately (Image + Title)
@@ -162,9 +141,6 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
             if (firstNews && firstNews.imageUrl) {
                 // Reuse logic or simplify for init
                 firstImage = firstNews.imageUrl.startsWith('http') ? firstNews.imageUrl : logoHttpUrl;
-                // Note: Ideally we run the full resolution logic here, but simpler is safer for now.
-                // Actually, let's rely on the loop to fix the image resolution in step 0, 
-                // BUT we must set the title now so it's not empty.
             }
             currentState = {
                 type: 'news',
@@ -173,45 +149,50 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
             };
         }
 
+        // Helper to resolve any image path to HTTP URL
+        const resolveImage = (imagePath: string | null | undefined): string | null => {
+            if (!imagePath) return null;
+            if (imagePath.startsWith('http')) return imagePath;
+
+            // Local path resolution
+            const absPath = path.join(projectRoot, imagePath);
+            const absPublic = path.join(projectRoot, 'public', imagePath);
+
+            if (fs.existsSync(absPath)) return toHttpUrl(imagePath);
+            if (fs.existsSync(absPublic)) return toHttpUrl(path.join('public', imagePath));
+
+            return null;
+        };
+
         // RE-WRITING LOOP FOR CLARITY AND CORRECTNESS
         audioSegments.forEach((seg, i) => {
             // FIX 2: Visual Outro Logic REFINED
-            // We do NOT force Outro for the last segment anymore in Reel Mode here.
-
             if (seg.imageIndex === -99) {
                 currentState = { type: 'outro', image: logoHttpUrl, title: '' };
             } else if (seg.imageIndex === 0 && !isReelMode) {
-                // Weekly Mode Intro
                 currentState = { type: 'intro', image: logoHttpUrl, title: '' };
             } else if (seg.imageIndex !== undefined) {
-                // News Item (Index 0 in Reel Mode falls here)
-
-                // If Reel: news[seg.imageIndex - 1] 
-                // (Using the corrected -1 logic)
                 const realNewsIndex = seg.imageIndex - 1;
                 const newsItem = news[realNewsIndex];
 
                 if (newsItem) {
-                    // ... image resolution logic ...
-                    let imageFinalUrl = '';
-                    const imageRelPath = newsItem.imageUrl;
-                    if (imageRelPath) {
-                        if (imageRelPath.startsWith('http')) {
-                            imageFinalUrl = imageRelPath;
-                        } else {
-                            // Local resolving logic
-                            const absPath = path.join(projectRoot, imageRelPath);
-                            const absPublic = path.join(projectRoot, 'public', imageRelPath);
-                            if (fs.existsSync(absPath)) imageFinalUrl = toHttpUrl(imageRelPath);
-                            else if (fs.existsSync(absPublic)) imageFinalUrl = toHttpUrl(path.join('public', imageRelPath));
-                        }
+                    const resolvedMain = resolveImage(newsItem.imageUrl);
+                    const imageFinalUrl = resolvedMain || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+                    // RESOLVE GALLERY IMAGES (Step 2b)
+                    const resolvedGallery: string[] = [];
+                    if (newsItem.gallery && Array.isArray(newsItem.gallery)) {
+                        newsItem.gallery.forEach(img => {
+                            const res = resolveImage(img);
+                            if (res) resolvedGallery.push(res);
+                        });
                     }
-                    if (!imageFinalUrl) imageFinalUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
                     currentState = {
                         type: 'news',
                         image: imageFinalUrl,
-                        title: newsItem.title || ''
+                        title: newsItem.title || '',
+                        gallery: resolvedGallery // Pass resolved gallery
                     };
                 }
             }
@@ -220,7 +201,8 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
                 type: currentState.type,
                 image: currentState.image,
                 title: currentState.title,
-                duration: seg.duration
+                duration: seg.duration,
+                gallery: currentState.gallery // Pass it along
             });
         });
 
@@ -231,7 +213,10 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
 
             for (let i = 1; i < rawSegments.length; i++) {
                 const next = rawSegments[i];
-                if (next.type === current.type && next.image === current.image && next.title === current.title) {
+                // Check if identical (including gallery)
+                const galleryMatch = JSON.stringify(current.gallery) === JSON.stringify(next.gallery);
+
+                if (next.type === current.type && next.image === current.image && next.title === current.title && galleryMatch) {
                     // Merge!
                     current.duration += next.duration;
                 } else {
@@ -247,8 +232,9 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
         const segments: Segment[] = coalescedSegments.map(s => ({
             type: s.type,
             image: s.image,
-            title: s.title || '', // Ensure string
-            durationInSeconds: s.duration
+            title: s.title || '',
+            durationInSeconds: s.duration,
+            gallery: s.gallery // Step 2b
         }));
 
         // 5. EXTEND/MODIFY FINAL SEGMENT Logic
