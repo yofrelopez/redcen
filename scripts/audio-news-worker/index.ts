@@ -71,6 +71,10 @@ async function main() {
                 console.error('❌ ERROR: Reel Mode requires manual links (--links). Automatic selection is disabled.');
                 process.exit(1); // Fail intentionally
             }
+            if (links.length > 1) {
+                console.error('⛔ ERROR: Por seguridad y calidad (sincronización visual), solo se permite 1 URL por Reel actualmente.');
+                process.exit(1);
+            }
             // Manual Mode
             // Lazy import to avoid circular dependency issues if any
             const { getNewsByLinks } = await import('./lib/news-selector');

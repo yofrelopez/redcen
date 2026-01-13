@@ -287,7 +287,7 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
 
         // Presentation Date
         const now = new Date();
-        const editionText = now.getHours() < 12 ? "EDICION MATUTINA" : "EDICION CENTRAL";
+        const editionText = now.getHours() < 12 ? "REDACCIÓN MATUTINA" : "REDACCIÓN CENTRAL";
         const dateStr = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short' })
             .toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9 ]/g, "");
         const presentationDate = `${dateStr} - ${editionText}`;
