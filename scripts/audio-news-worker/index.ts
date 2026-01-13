@@ -65,15 +65,25 @@ async function main() {
         logHeader('📰 STEP 1: FETCHING NEWS');
         let news: any[] = [];
 
-        if (isReelMode && links.length > 0) {
+        if (isReelMode) {
+            // STRICT REEL MODE: Must have links
+            if (links.length === 0) {
+                console.error('❌ ERROR: Reel Mode requires manual links (--links). Automatic selection is disabled.');
+                process.exit(1); // Fail intentionally
+            }
             // Manual Mode
             // Lazy import to avoid circular dependency issues if any
             const { getNewsByLinks } = await import('./lib/news-selector');
             console.log(`🔗 Manual Links Provided: ${links.length}`);
             news = await getNewsByLinks(links);
         } else {
-            // Automatic Mode
-            news = await getTopNews();
+            // WEEKLY MODE (Automatic allowed)
+            if (links.length > 0) {
+                const { getNewsByLinks } = await import('./lib/news-selector');
+                news = await getNewsByLinks(links);
+            } else {
+                news = await getTopNews();
+            }
         }
 
         if (news.length === 0) {

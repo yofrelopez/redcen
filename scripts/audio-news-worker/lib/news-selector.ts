@@ -113,6 +113,7 @@ export async function getNewsByLinks(links: string[]): Promise<NewsItem[]> {
 
         // 1. Extract slugs from URLs
         // Expected format: https://redcen.com/nota/my-slug OR just my-slug
+
         const slugs = links.map(link => {
             const parts = link.split('/');
             return parts[parts.length - 1] || link;

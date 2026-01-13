@@ -1,11 +1,12 @@
 name: Daily News Reel
 
 on:
-  schedule:
-    # Lima is UTC-5.
-    # 05:00 AM Lima = 10:00 UTC
-    # 01:00 PM Lima = 18:00 UTC
-    - cron: '0 10,18 * * *'
+#   schedule:
+#     # Lima is UTC-5.
+#     # 05:00 AM Lima = 10:00 UTC
+#     # 01:00 PM Lima = 18:00 UTC
+#     # DISABLED: Automatic schedule removed by user request (Manual Mode Only)
+#     # - cron: '0 10,18 * * *'
   workflow_dispatch: 
     inputs:
       links:

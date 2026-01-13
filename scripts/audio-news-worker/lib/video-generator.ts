@@ -175,14 +175,10 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
 
         // RE-WRITING LOOP FOR CLARITY AND CORRECTNESS
         audioSegments.forEach((seg, i) => {
-            // FIX 2: Visual Outro during Farewell
-            // If this is the LAST audio segment (Farewell) in Reel Mode, force Visual Outro
-            const isLastSegment = i === audioSegments.length - 1;
+            // FIX 2: Visual Outro Logic REFINED
+            // We do NOT force Outro for the last segment anymore in Reel Mode here.
 
-            if (isReelMode && isLastSegment) {
-                currentState = { type: 'outro', image: logoHttpUrl, title: '' };
-            }
-            else if (seg.imageIndex === -99) {
+            if (seg.imageIndex === -99) {
                 currentState = { type: 'outro', image: logoHttpUrl, title: '' };
             } else if (seg.imageIndex === 0 && !isReelMode) {
                 // Weekly Mode Intro
@@ -255,9 +251,46 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
             durationInSeconds: s.duration
         }));
 
-        // 5. Extend Final Segment Visuals (To cover the 3s Audio Padding)
+        // 5. EXTEND/MODIFY FINAL SEGMENT Logic
         if (segments.length > 0) {
-            segments[segments.length - 1].durationInSeconds += 3.0;
+            if (isReelMode) {
+                // SPECIAL REEL LOGIC:
+                // The last segment is likely the "Farewell/Question".
+                // We want to KEEP it as 'news' for most of the time, 
+                // and switch to 'outro' only for the last 5 seconds.
+
+                const lastIdx = segments.length - 1;
+                const lastSeg = segments[lastIdx];
+                const OUTRO_DURATION = 5.0;
+
+                // Add the 3s padding first (so total duration is correct before splitting)
+                lastSeg.durationInSeconds += 3.0;
+
+                if (lastSeg.type === 'news' && lastSeg.durationInSeconds > OUTRO_DURATION) {
+                    // Split it!
+                    const newsDuration = lastSeg.durationInSeconds - OUTRO_DURATION;
+
+                    // Modify last segment to be shorter
+                    lastSeg.durationInSeconds = newsDuration;
+
+                    // Append new Outro segment
+                    segments.push({
+                        type: 'outro',
+                        image: logoHttpUrl,
+                        title: '',
+                        durationInSeconds: OUTRO_DURATION
+                    });
+                    console.log(`✂️ REEL MODE: Split last segment. News: ${newsDuration.toFixed(1)}s, Outro: ${OUTRO_DURATION.toFixed(1)}s`);
+                } else {
+                    // Fallback: If segment is too short, just force it to be outro? 
+                    // Or simply append? Let's just append an Outro if strictly needed?
+                    // No, simpler to just let it be.
+                }
+
+            } else {
+                // Regular Logic: Just extend visual to cover padding
+                segments[segments.length - 1].durationInSeconds += 3.0;
+            }
         }
 
         console.log('🎞️  Video Segments Structure:', segments.map(s => `[${s.type.toUpperCase()}] ${s.durationInSeconds.toFixed(1)}s`).join(' -> '));

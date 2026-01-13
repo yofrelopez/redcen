@@ -30,9 +30,9 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
             height: '100%',
             overflow: 'hidden',
             backgroundColor: '#000', // Deep base
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            display: 'flex', // RESTORED
+            alignItems: 'center', // RESTORED
+            justifyContent: 'center' // RESTORED
         }}>
             {/* 1. Blurred Background Layer (Fill Screen) */}
             <Img
@@ -52,19 +52,15 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
 
             {/* 2. Foreground Image (Constrained with Margins) */}
             <div style={{
-                position: 'relative',
-                width: '85%', // More "air" on sides (was 90%)
-                height: '50%', // Reduce height to favor horizontal aspect ratios in vertical frame? 
-                // No, keep it flexible but "contained". 
-                // If I constrain height too much, vertical images suffer.
-                // Better to keep height generous (e.g. 70%) and let objectFit: contain handle it.
-                aspectRatio: 'auto', // Allow natural shape within constraints
-                maxHeight: '70%',
-                marginTop: '150px', // Push down below header
+                position: 'relative', // RESTORED
+                width: '85%',
+                height: '50%', // ORIGINAL
+                // Remotion/CSS Logic: marginTop in a centered flex container PUSHES content down from center.
+                // User requested 190px explicitly to lower it.
+                marginTop: '190px',
                 zIndex: 1,
                 boxShadow: '0 20px 50px rgba(0,0,0,0.8)', // Deep shadow
                 borderRadius: '20px',
-                // Optional: distinctive background for the "card" if transparent areas appear
                 backgroundColor: 'rgba(0,0,0,0.2)',
             }}>
                 <Img
@@ -72,7 +68,8 @@ export const NewsSlide: React.FC<Props> = ({ image, title, durationInFrames }) =
                     style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain', // SHOW FULL IMAGE (No cropping)
+                        objectFit: 'contain', // SHOW FULL IMAGE
+                        objectPosition: 'top', // ALIGN TO TOP
                         transform: `scale(${scaleFg})`, // Static
                         borderRadius: '20px',
                     }}
