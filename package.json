@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
@@ -12,6 +12,7 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
     "@google/generative-ai": "^0.24.1",
+    "@mozilla/readability": "^0.6.0",
     "@next/third-parties": "^16.1.1",
     "@prisma/adapter-pg": "^7.0.1",
     "@prisma/client": "^7.0.1",
@@ -46,6 +47,7 @@
     "framer-motion": "^12.23.25",
     "groq-sdk": "^0.37.0",
     "isomorphic-dompurify": "^2.33.0",
+    "jsdom": "^27.4.0",
     "lucide-react": "^0.555.0",
     "next": "16.0.7",
     "next-auth": "^5.0.0-beta.30",

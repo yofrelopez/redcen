@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
 import { revalidatePath } from "next/cache"
+import { NoteType } from "@prisma/client"
 
 
 export async function createNote(formData: FormData) {
@@ -18,7 +19,7 @@ export async function createNote(formData: FormData) {
     const categoryIds = formData.getAll("categories") as string[]
 
     // Optional Fields
-    const noteType = (formData.get("noteType") as any) || "PRESS_NOTE"
+    const noteType = (formData.get("noteType") as NoteType) || "PRESS_NOTE"
     const region = formData.get("region") as string | null
     const province = formData.get("province") as string | null
     const district = formData.get("district") as string | null
@@ -146,7 +147,7 @@ export async function updateNote(id: string, formData: FormData) {
     const categoryIds = formData.getAll("categories") as string[]
     const published = formData.get("published") === "on"
 
-    const noteType = (formData.get("noteType") as any) || "PRESS_NOTE"
+    const noteType = (formData.get("noteType") as NoteType) || "PRESS_NOTE"
     const region = formData.get("region") as string | null
     const province = formData.get("province") as string | null
     const district = formData.get("district") as string | null
@@ -232,7 +233,7 @@ export async function updateNote(id: string, formData: FormData) {
                 gallery,
                 categoryIds,
                 published,
-                type: noteType as any,
+                type: noteType,
                 region,
                 province,
                 district,

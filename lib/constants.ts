@@ -9,6 +9,7 @@ export const NOTE_TYPE_LABELS: Record<string, string> = {
     ALERT: "Alerta",
     GALLERY: "Galería",
     REPORT: "Reportaje",
+    NEWS: "Noticia",
 }
 
 export const NOTE_TYPE_COLORS: Record<string, string> = {
@@ -22,4 +23,5 @@ export const NOTE_TYPE_COLORS: Record<string, string> = {
     ALERT: "bg-rose-100 text-rose-800",
     GALLERY: "bg-emerald-100 text-emerald-800",
     REPORT: "bg-indigo-100 text-indigo-800",
+    NEWS: "bg-orange-100 text-orange-800",
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./logout-button";
+import { Sparkles } from "lucide-react";
 
 // Simple Icons
 const HomeIcon = ({ className }: { className?: string }) => (
@@ -46,6 +47,7 @@ export function DashboardSidebar({ isOpen, onClose, user }: DashboardSidebarProp
     const navItems = [
         { name: "Inicio", href: "/dashboard", icon: HomeIcon },
         { name: "Notas", href: "/dashboard/notas", icon: FileTextIcon },
+        { name: "Generador IA", href: "/dashboard/notas/generador", icon: Sparkles },
         { name: "Perfil", href: "/dashboard/perfil", icon: UserIcon },
     ];
 
