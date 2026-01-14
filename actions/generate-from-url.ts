@@ -25,7 +25,7 @@ export type GenerateState = {
 }
 
 // Allow up to 60 seconds for scraping + AI processing
-export const maxDuration = 60;
+
 
 export async function generateNoteFromUrl(url: string, userId: string): Promise<GenerateState> {
     if (!url || !userId) {

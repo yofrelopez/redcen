@@ -6,6 +6,8 @@ export const metadata = {
     title: "Generador de Contenido | Redcen Dashboard",
 }
 
+export const maxDuration = 60; // Allow regular generation (up to 60s)
+
 export default async function GeneradorPage() {
     const session = await auth()
 
