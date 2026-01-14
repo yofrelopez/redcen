@@ -29,21 +29,21 @@ export async function generateNoteFromUrl(url: string, userId: string): Promise<
         return { success: false, message: "URL y Usuario son requeridos" }
     }
 
-    // 0. CHECK FOR DUPLICATES
-    const existing = await prisma.pressNote.findUnique({
-        where: { sourceUrl: url }
-    })
-
-    if (existing) {
-        return {
-            success: true,
-            noteId: existing.id,
-            message: "Esta noticia ya había sido generada previamente."
-        }
-    }
-
     try {
         console.log(`🪄 [Magic URL] Iniciando proceso para: ${url}`)
+
+        // 0. CHECK FOR DUPLICATES (Moved inside try/catch for safety)
+        const existing = await prisma.pressNote.findUnique({
+            where: { sourceUrl: url }
+        })
+
+        if (existing) {
+            return {
+                success: true,
+                noteId: existing.id,
+                message: "Esta noticia ya había sido generada previamente."
+            }
+        }
 
         // 1. EXTRACTION
         const extracted = await extractArticleFromUrl(url)
