@@ -2,7 +2,7 @@
 name: Daily News Scraper
 
 on:
-  schedule:
+  # schedule:
     # Ejecutar 3 veces al día: 6am, 12pm, 6pm (Hora Perú UTC-5)
     # - 11:00 UTC = 06:00 PE
     # - 17:00 UTC = 12:00 PE
