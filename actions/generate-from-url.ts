@@ -24,6 +24,9 @@ export type GenerateState = {
     errorDetail?: string // Technical error
 }
 
+// Allow up to 60 seconds for scraping + AI processing
+export const maxDuration = 60;
+
 export async function generateNoteFromUrl(url: string, userId: string): Promise<GenerateState> {
     if (!url || !userId) {
         return { success: false, message: "URL y Usuario son requeridos" }
@@ -32,17 +35,22 @@ export async function generateNoteFromUrl(url: string, userId: string): Promise<
     try {
         console.log(`🪄 [Magic URL] Iniciando proceso para: ${url}`)
 
-        // 0. CHECK FOR DUPLICATES (Moved inside try/catch for safety)
-        const existing = await prisma.pressNote.findUnique({
-            where: { sourceUrl: url }
-        })
+        // 0. CHECK FOR DUPLICATES
+        try {
+            const existing = await prisma.pressNote.findUnique({
+                where: { sourceUrl: url }
+            })
 
-        if (existing) {
-            return {
-                success: true,
-                noteId: existing.id,
-                message: "Esta noticia ya había sido generada previamente."
+            if (existing) {
+                return {
+                    success: true,
+                    noteId: existing.id,
+                    message: "Esta noticia ya había sido generada previamente."
+                }
             }
+        } catch (dbError) {
+            console.error("⚠️ Error checking duplicates (non-fatal):", dbError)
+            // Continue execution if this check fails (e.g. connection blip)
         }
 
         // 1. EXTRACTION
@@ -97,16 +105,11 @@ export async function generateNoteFromUrl(url: string, userId: string): Promise<
         }
 
         // 2.5 APPEND SOURCE LINK
-        // 2.5 APPEND SOURCE LINK
-        // We append it manually to ensure it is always present and correct.
         const sourceName = extracted.siteName || "Noticia Original"
         const sourceHtml = `<p><strong>Fuente:</strong> <a href="${url}" target="_blank" rel="noopener noreferrer">${sourceName}</a></p>`
         aiData.content += sourceHtml
 
         // 3. DATABASE SAVING
-        // Find existing category or fallback. Using "Sociedad" or pure name match if possible.
-        // We will do a fuzzy match or simply dont assign if not found, let user decide.
-        // But for better UX, let's try to find a category by name.
         let categoryId: string | undefined
         const dbCategory = await prisma.category.findFirst({
             where: {
@@ -119,39 +122,45 @@ export async function generateNoteFromUrl(url: string, userId: string): Promise<
 
         const categoryIds = dbCategory ? [dbCategory.id] : []
 
-        const newNote = await prisma.pressNote.create({
-            data: {
-                title: aiData.title,
-                slug: makeSlug(aiData.title),
-                content: aiData.content,
-                summary: aiData.summary,
-                metaTitle: aiData.metaTitle,
-                metaDescription: aiData.metaDescription,
-                tags: aiData.tags,
+        try {
+            const newNote = await prisma.pressNote.create({
+                data: {
+                    title: aiData.title,
+                    slug: makeSlug(aiData.title),
+                    content: aiData.content,
+                    summary: aiData.summary,
+                    metaTitle: aiData.metaTitle,
+                    metaDescription: aiData.metaDescription,
+                    tags: aiData.tags,
 
-                // Metadata
-                sourceUrl: url,
-                mainImage: extracted.image, // Extracted OG Image
-                mainImageAlt: aiData.mainImageAlt,
-                mainImageCaption: aiData.mainImageCaption,
-                gallery: extracted.gallery, // Extra images
-                published: false, // DRAFT MODE
+                    // Metadata
+                    sourceUrl: url,
+                    mainImage: extracted.image, // Extracted OG Image
+                    mainImageAlt: aiData.mainImageAlt,
+                    mainImageCaption: aiData.mainImageCaption,
+                    gallery: extracted.gallery, // Extra images
+                    published: false, // DRAFT MODE
 
-                authorId: userId,
-                categoryIds: categoryIds,
-                type: NoteType.NEWS, // Assigned as generic News ("Noticias")
+                    authorId: userId,
+                    categoryIds: categoryIds,
+                    type: NoteType.NEWS, // Assigned as generic News ("Noticias")
+                }
+            })
 
-                // Original date? We default to now() for creation, user can edit.
+            console.log(`✅ [Magic URL] Nota creada: ${newNote.id}`)
+            revalidatePath("/dashboard/notas")
+
+            return {
+                success: true,
+                noteId: newNote.id
             }
-        })
-
-        console.log(`✅ [Magic URL] Nota creada: ${newNote.id}`)
-
-        revalidatePath("/dashboard/notas")
-
-        return {
-            success: true,
-            noteId: newNote.id
+        } catch (dbSaveError: any) {
+            console.error("❌ Database Save Error:", dbSaveError)
+            return {
+                success: false,
+                message: "Error al guardar en la base de datos.",
+                errorDetail: dbSaveError.message
+            }
         }
 
     } catch (error) {
