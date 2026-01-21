@@ -429,7 +429,7 @@ export async function searchNotes({
 
 export async function getInstitutions() {
     return await prisma.user.findMany({
-        // where: { role: "INSTITUTION" }, // Removed to include logic ALL users (Admin, Journalist, etc.)
+        where: { role: { not: "ADMIN" } },
         select: {
             id: true,
             name: true,
