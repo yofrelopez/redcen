@@ -88,6 +88,7 @@ const CommandList = ({
                 {items.map((item: CommandItemProps, index: number) => {
                     return (
                         <button
+                            type="button"
                             className={`relative flex w-full cursor-pointer select-none items-center rounded-lg px-2 py-2 text-sm outline-none transition-all duration-200 ${index === selectedIndex
                                 ? "bg-gray-100/80 text-gray-900"
                                 : "text-gray-600 hover:bg-gray-50"

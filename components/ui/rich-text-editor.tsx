@@ -97,6 +97,19 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
     })
 
     // ... useEffects ...
+    useEffect(() => {
+        const handleOpenUpload = (e: any) => {
+            const { editor, range } = e.detail
+            editorRef.current = editor
+            rangeRef.current = range
+            uploadBtnRef.current?.click()
+        }
+
+        document.addEventListener('open-cloudinary-upload', handleOpenUpload)
+        return () => {
+            document.removeEventListener('open-cloudinary-upload', handleOpenUpload)
+        }
+    }, [])
 
     if (!editor) {
         return null
@@ -294,6 +307,7 @@ export function RichTextEditor({ content, onChange, editable = true }: RichTextE
                 {({ open }) => (
                     <button
                         ref={uploadBtnRef}
+                        type="button"
                         className="hidden"
                         onClick={() => open?.()}
                     />

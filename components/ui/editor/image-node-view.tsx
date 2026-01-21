@@ -16,8 +16,8 @@ export const ImageNodeView = (props: NodeViewProps) => {
         <NodeViewWrapper className="image-node-view my-8">
             <div
                 className={`relative group flex ${align === 'left' ? 'justify-start' :
-                        align === 'right' ? 'justify-end' :
-                            'justify-center'
+                    align === 'right' ? 'justify-end' :
+                        'justify-center'
                     }`}
             >
                 {/* Floating Toolbar (visible on select/hover) */}
@@ -49,6 +49,31 @@ export const ImageNodeView = (props: NodeViewProps) => {
                         </button>
                         <div className="w-px h-4 mx-1 bg-gray-200" />
                         <button
+                            onClick={() => updateAttributes({ width: '25%' })}
+                            className={`px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'bg-gray-100 text-primary' : 'text-gray-500'}`}
+                            title="Pequeño (25%)"
+                            type="button"
+                        >
+                            P
+                        </button>
+                        <button
+                            onClick={() => updateAttributes({ width: '50%' })}
+                            className={`px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'bg-gray-100 text-primary' : 'text-gray-500'}`}
+                            title="Mediano (50%)"
+                            type="button"
+                        >
+                            M
+                        </button>
+                        <button
+                            onClick={() => updateAttributes({ width: '100%' })}
+                            className={`px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'bg-gray-100 text-primary' : 'text-gray-500'}`}
+                            title="Grande (100%)"
+                            type="button"
+                        >
+                            G
+                        </button>
+                        <div className="w-px h-4 mx-1 bg-gray-200" />
+                        <button
                             onClick={() => updateAttributes({ showCaption: !showCaption })}
                             className={`p-1.5 rounded hover:bg-gray-100 ${showCaption ? 'bg-gray-100 text-primary' : 'text-gray-500'}`}
                             title="Mostrar leyenda"
@@ -76,13 +101,14 @@ export const ImageNodeView = (props: NodeViewProps) => {
                         left: { left: -6, width: 12, cursor: 'ew-resize' }
                     }}
                 >
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
+                    <div className="relative w-full h-auto rounded-lg border border-gray-100 shadow-sm bg-gray-50">
                         <Image
                             src={node.attrs.src}
                             alt={node.attrs.caption || 'Imagen de la nota'}
-                            fill
-                            className="object-cover"
+                            width={0}
+                            height={0}
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="w-full h-auto rounded-lg"
                         />
                     </div>
                 </Resizable>
@@ -92,8 +118,8 @@ export const ImageNodeView = (props: NodeViewProps) => {
             {showCaption && (
                 <div
                     className={`mt-2 ${align === 'left' ? 'text-left' :
-                            align === 'right' ? 'text-right' :
-                                'text-center'
+                        align === 'right' ? 'text-right' :
+                            'text-center'
                         }`}
                 >
                     {/* contentEditable={false} is redundant on input itself if handled correctly, but wrapping can be safer */}
