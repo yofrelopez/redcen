@@ -55,7 +55,7 @@ export function NoteHeader({ title, summary, author, createdAt, url, views, read
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-6 leading-[1.1] tracking-tight text-balance">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-6 leading-[1.1] tracking-tight">
                 {title}
             </h1>
 
