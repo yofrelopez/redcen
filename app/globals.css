@@ -32,22 +32,39 @@ body {
 
   /* Marquee Animation for Podcast Player */
   @keyframes marquee {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
+    0% {
+      transform: translateX(100%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
   }
-  
+
   .animate-marquee {
     animation: marquee 20s linear infinite;
   }
-  
+
   /* Audio Visualizer Bars */
   @keyframes sound-bar {
-      0% { height: 3px; opacity: 0.5; }
-      50% { height: 100%; opacity: 1; }
-      100% { height: 3px; opacity: 0.5; }
+    0% {
+      height: 3px;
+      opacity: 0.5;
+    }
+
+    50% {
+      height: 100%;
+      opacity: 1;
+    }
+
+    100% {
+      height: 3px;
+      opacity: 0.5;
+    }
   }
+
   .animate-sound-bar {
-      animation: sound-bar 0.8s ease-in-out infinite alternate;
+    animation: sound-bar 0.8s ease-in-out infinite alternate;
   }
 }
 
@@ -178,4 +195,75 @@ iframe[src*="cloudinary"],
 /* Ensure focus trap doesn't kill it */
 div[data-radix-focus-guard] {
   z-index: 1 !important;
+}
+
+/* =========================================
+   PUBLIC NOTE STYLING (WYSIWYG Match)
+   ========================================= */
+
+/* 1. Image & Figure Alignment & Sizing */
+img[data-align="center"],
+figure[data-align="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  /* For figcaption */
+}
+
+img[data-align="left"],
+figure[data-align="left"] {
+  float: left;
+  margin-right: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+img[data-align="right"],
+figure[data-align="right"] {
+  display: block;
+  float: right;
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Ensure images respect their width % but don't overflow mobile */
+.prose img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Captions styling */
+.prose figcaption {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  /* gray-500 */
+  font-size: 0.875rem;
+  /* text-sm */
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 2. Typography Enforcement (Fix for flat H2/H3) */
+.prose h2,
+.prose h3 {
+  color: #111827 !important;
+  /* gray-900 forced */
+  font-weight: 700 !important;
+  /* bold forced */
+  margin-top: 2em;
+  margin-bottom: 1em;
+  line-height: 1.3;
+}
+
+/* Fix for H2 specifically to be larger/clearer */
+.prose h2 {
+  font-size: 1.5em;
+  /* Tailwind xl/2xl equiv */
+}
+
+/* Fix for Bold text not looking bold enough */
+.prose strong,
+.prose b {
+  font-weight: 700 !important;
+  color: #111827 !important;
 }

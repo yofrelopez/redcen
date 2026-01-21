@@ -74,8 +74,8 @@ DOMPurify.addHook('afterSanitizeAttributes', function (node) {
 
 export default function NoteContent({ content }: NoteContentProps) {
     const sanitizedContent = DOMPurify.sanitize(content, {
-        ADD_TAGS: ['iframe', 'audio', 'source'],
-        ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'width', 'height', 'controls', 'preload', 'type'],
+        ADD_TAGS: ['iframe', 'audio', 'source', 'figure', 'figcaption'],
+        ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'width', 'height', 'controls', 'preload', 'type', 'data-align', 'style'],
     })
 
     return (
