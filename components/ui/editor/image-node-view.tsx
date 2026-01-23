@@ -122,16 +122,20 @@ export const ImageNodeView = (props: NodeViewProps) => {
                             'text-center'
                         }`}
                 >
-                    {/* contentEditable={false} is redundant on input itself if handled correctly, but wrapping can be safer */}
-                    <input
-                        type="text"
+                    <textarea
                         placeholder="Escribe una leyenda..."
                         value={node.attrs.caption}
                         onChange={(e) => updateAttributes({ caption: e.target.value })}
-                        className="w-full bg-transparent border-none text-sm text-gray-500 placeholder:text-gray-300 focus:ring-0 focus:outline-none"
+                        className="w-full bg-transparent border-none text-sm text-gray-500 placeholder:text-gray-300 focus:ring-0 focus:outline-none resize-none overflow-hidden min-h-[1.5em]"
+                        rows={1}
                         style={{ textAlign: align as any }}
-                        onKeyDown={(e) => e.stopPropagation()} // Stop bubbling to prevent editor from catching keys
-                        onMouseDown={(e) => e.stopPropagation()} // Prevent editor selection issues
+                        onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = `${target.scrollHeight}px`;
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>

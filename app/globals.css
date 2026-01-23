@@ -204,36 +204,46 @@ div[data-radix-focus-guard] {
 /* 1. Image & Figure Alignment & Sizing */
 img[data-align="center"],
 figure[data-align="center"] {
-  display: block;
+  display: table;
+  /* Fix: Keeps caption width same as image */
   margin-left: auto;
   margin-right: auto;
-  text-align: center;
-  /* For figcaption */
+  clear: both;
 }
 
 img[data-align="left"],
 figure[data-align="left"] {
+  display: table;
+  /* Fix: Keeps caption width same as image */
   float: left;
   margin-right: 1.5rem;
   margin-bottom: 0.5rem;
+  clear: left;
 }
 
 img[data-align="right"],
 figure[data-align="right"] {
-  display: block;
+  display: table;
+  /* Fix: Keeps caption width same as image */
   float: right;
   margin-left: 1.5rem;
   margin-bottom: 0.5rem;
+  clear: right;
 }
 
 /* Ensure images respect their width % but don't overflow mobile */
 .prose img {
   max-width: 100%;
   height: auto;
+  display: block;
+  /* Ensure image is block inside table */
 }
 
 /* Captions styling */
 .prose figcaption {
+  display: table-caption;
+  /* Constraint caption to table width */
+  caption-side: bottom;
   margin-top: 0.5rem;
   color: #6b7280;
   /* gray-500 */
