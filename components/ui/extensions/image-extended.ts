@@ -8,8 +8,23 @@ export const ImageExtended = Image.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
+            src: {
+                default: null,
+                parseHTML: element => {
+                    if (element.tagName === 'FIGURE') {
+                        return element.querySelector('img')?.getAttribute('src')
+                    }
+                    return element.getAttribute('src')
+                }
+            },
             width: {
                 default: '100%',
+                parseHTML: element => {
+                    if (element.tagName === 'FIGURE') {
+                        return element.querySelector('img')?.getAttribute('width')
+                    }
+                    return element.getAttribute('width')
+                },
                 renderHTML: attributes => ({
                     width: attributes.width,
                 }),
@@ -26,6 +41,9 @@ export const ImageExtended = Image.extend({
             caption: {
                 default: '',
                 parseHTML: element => {
+                    if (element.tagName === 'FIGURE') {
+                        return element.querySelector('figcaption')?.innerText || element.querySelector('img')?.getAttribute('alt')
+                    }
                     return element.getAttribute('alt') || element.parentElement?.querySelector('figcaption')?.innerText
                 },
                 renderHTML: attributes => ({
@@ -36,6 +54,17 @@ export const ImageExtended = Image.extend({
                 default: false,
             },
         }
+    },
+
+    parseHTML() {
+        return [
+            {
+                tag: 'figure',
+            },
+            {
+                tag: 'img',
+            },
+        ]
     },
 
     renderHTML({ HTMLAttributes, node }) {
