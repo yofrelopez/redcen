@@ -52,6 +52,12 @@ export const ImageExtended = Image.extend({
             },
             showCaption: {
                 default: false,
+                parseHTML: element => {
+                    if (element.tagName === 'FIGURE') {
+                        return !!(element.querySelector('figcaption')?.innerText || element.querySelector('img')?.getAttribute('alt'))
+                    }
+                    return !!(element.getAttribute('alt') || element.parentElement?.querySelector('figcaption')?.innerText)
+                },
             },
         }
     },
