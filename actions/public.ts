@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
+import { unstable_cache } from "next/cache"
 
 const getVisibleNoteWhere = () => ({
     published: true,
@@ -10,22 +11,26 @@ const getVisibleNoteWhere = () => ({
     ]
 })
 
-export async function getLatestNotes() {
-    return await prisma.pressNote.findMany({
-        where: getVisibleNoteWhere(),
-        orderBy: { createdAt: "desc" },
-        take: 17,
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    slug: true,
+export const getLatestNotes = unstable_cache(
+    async () => {
+        return await prisma.pressNote.findMany({
+            where: getVisibleNoteWhere(),
+            orderBy: { createdAt: "desc" },
+            take: 17,
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        slug: true,
+                    },
                 },
             },
-        },
-    })
-}
+        })
+    },
+    ["latest-notes"],
+    { revalidate: 3600, tags: ["notes"] }
+)
 
 export async function getNoteBySlug(slug: string) {
     return await prisma.pressNote.findFirst({
@@ -47,32 +52,36 @@ export async function getNoteBySlug(slug: string) {
     })
 }
 
-export async function getNoteByInstitutionAndSlug(institutionSlug: string, noteSlug: string) {
-    const note = await prisma.pressNote.findFirst({
-        where: {
-            slug: noteSlug,
-            ...getVisibleNoteWhere()
-        },
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    logo: true,
-                    slug: true,
-                    abbreviation: true,
+export const getNoteByInstitutionAndSlug = unstable_cache(
+    async (institutionSlug: string, noteSlug: string) => {
+        const note = await prisma.pressNote.findFirst({
+            where: {
+                slug: noteSlug,
+                ...getVisibleNoteWhere()
+            },
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        logo: true,
+                        slug: true,
+                        abbreviation: true,
+                    },
                 },
             },
-        },
-    })
+        })
 
-    // Verify the author matches the URL slug
-    if (!note || note.author.slug !== institutionSlug) {
-        return null
-    }
+        // Verify the author matches the URL slug
+        if (!note || note.author.slug !== institutionSlug) {
+            return null
+        }
 
-    return note
-}
+        return note
+    },
+    ["note-by-institution-and-slug"],
+    { revalidate: 3600, tags: ["notes"] }
+)
 
 export async function getInstitutionByEmail(email: string) {
     return await prisma.user.findUnique({
@@ -92,67 +101,75 @@ export async function getInstitutionByEmail(email: string) {
     })
 }
 
-export async function getNotesByInstitution(authorId: string, page: number = 1, limit: number = 12) {
-    const skip = (page - 1) * limit
-    const where = {
-        authorId,
-        ...getVisibleNoteWhere()
-    }
+export const getNotesByInstitution = unstable_cache(
+    async (authorId: string, page: number = 1, limit: number = 12) => {
+        const skip = (page - 1) * limit
+        const where = {
+            authorId,
+            ...getVisibleNoteWhere()
+        }
 
-    const [notes, total] = await Promise.all([
-        prisma.pressNote.findMany({
-            where,
-            orderBy: { createdAt: "desc" },
-            skip,
-            take: limit,
-            include: {
-                author: {
-                    select: {
-                        name: true,
-                        email: true,
-                        slug: true,
+        const [notes, total] = await Promise.all([
+            prisma.pressNote.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit,
+                include: {
+                    author: {
+                        select: {
+                            name: true,
+                            email: true,
+                            slug: true,
+                        },
                     },
                 },
-            },
-        }),
-        prisma.pressNote.count({ where }),
-    ])
+            }),
+            prisma.pressNote.count({ where }),
+        ])
 
-    return {
-        notes,
-        total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-    }
-}
+        return {
+            notes,
+            total,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+        }
+    },
+    ["notes-by-institution-list"],
+    { revalidate: 3600, tags: ["notes"] }
+)
 
-export async function getInstitutionBySlug(slug: string) {
-    return await prisma.user.findUnique({
-        where: { slug },
-        select: {
-            id: true,
-            slug: true,
-            name: true,
-            email: true,
-            description: true,
-            website: true,
-            logo: true,
-            banner: true,
-            region: true,
-            province: true,
-            district: true,
-            address: true,
-            googleMapsUrl: true,
-            phone: true,
-            publicEmail: true,
-            socialLinks: true,
-            createdAt: true,
-            _count: {
-                select: { notes: { where: getVisibleNoteWhere() } },
+export const getInstitutionBySlug = unstable_cache(
+    async (slug: string) => {
+        return await prisma.user.findUnique({
+            where: { slug },
+            select: {
+                id: true,
+                slug: true,
+                name: true,
+                email: true,
+                description: true,
+                website: true,
+                logo: true,
+                banner: true,
+                region: true,
+                province: true,
+                district: true,
+                address: true,
+                googleMapsUrl: true,
+                phone: true,
+                publicEmail: true,
+                socialLinks: true,
+                createdAt: true,
+                _count: {
+                    select: { notes: { where: getVisibleNoteWhere() } },
+                },
             },
-        },
-    })
-}
+        })
+    },
+    ["institution-by-slug"],
+    { revalidate: 3600, tags: ["institutions"] }
+)
 
 export async function getInstitutions(filters?: { region?: string, province?: string, district?: string, search?: string }) {
     const where: any = {
@@ -187,56 +204,64 @@ export async function getInstitutions(filters?: { region?: string, province?: st
     })
 }
 
-export async function getRecentNotes(count: number = 3, excludeId?: string) {
-    const where: any = getVisibleNoteWhere()
-    if (excludeId) {
-        where.id = { not: excludeId }
-    }
+export const getRecentNotes = unstable_cache(
+    async (count: number = 3, excludeId?: string) => {
+        const where: any = getVisibleNoteWhere()
+        if (excludeId) {
+            where.id = { not: excludeId }
+        }
 
-    return await prisma.pressNote.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: count,
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    slug: true,
-                    logo: true,
-                    abbreviation: true,
+        return await prisma.pressNote.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: count,
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        slug: true,
+                        logo: true,
+                        abbreviation: true,
+                    },
                 },
             },
-        },
-    })
-}
+        })
+    },
+    ["recent-notes"],
+    { revalidate: 3600, tags: ["notes"] }
+)
 
-export async function getMoreNotesFromAuthor(authorId: string, count: number = 3, excludeId?: string) {
-    const where: any = {
-        authorId,
-        ...getVisibleNoteWhere()
-    }
-    if (excludeId) {
-        where.id = { not: excludeId }
-    }
+export const getMoreNotesFromAuthor = unstable_cache(
+    async (authorId: string, count: number = 3, excludeId?: string) => {
+        const where: any = {
+            authorId,
+            ...getVisibleNoteWhere()
+        }
+        if (excludeId) {
+            where.id = { not: excludeId }
+        }
 
-    return await prisma.pressNote.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: count,
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    slug: true,
-                    logo: true,
-                    abbreviation: true,
+        return await prisma.pressNote.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: count,
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        slug: true,
+                        logo: true,
+                        abbreviation: true,
+                    },
                 },
             },
-        },
-    })
-}
+        })
+    },
+    ["more-notes-author"],
+    { revalidate: 3600, tags: ["notes"] }
+)
 
 export async function incrementNoteView(noteId: string) {
     await prisma.pressNote.update({
