@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://redcen.com'
 
+export const revalidate = 86400 // Revalidate once a day
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Fetch all published notes
     const notes = await prisma.pressNote.findMany({

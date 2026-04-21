@@ -32,25 +32,29 @@ export const getLatestNotes = unstable_cache(
     { revalidate: 3600, tags: ["notes"] }
 )
 
-export async function getNoteBySlug(slug: string) {
-    return await prisma.pressNote.findFirst({
-        where: {
-            slug,
-            ...getVisibleNoteWhere()
-        },
-        include: {
-            author: {
-                select: {
-                    name: true,
-                    email: true,
-                    logo: true,
-                    slug: true,
-                    abbreviation: true,
+export const getNoteBySlug = unstable_cache(
+    async (slug: string) => {
+        return await prisma.pressNote.findFirst({
+            where: {
+                slug,
+                ...getVisibleNoteWhere()
+            },
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        email: true,
+                        logo: true,
+                        slug: true,
+                        abbreviation: true,
+                    },
                 },
             },
-        },
-    })
-}
+        })
+    },
+    ["note-by-slug"],
+    { revalidate: 86400, tags: ["notes"] }
+)
 
 export const getNoteByInstitutionAndSlug = unstable_cache(
     async (institutionSlug: string, noteSlug: string) => {
